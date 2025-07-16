@@ -1,0 +1,15 @@
+import StudentGradeCard from '@/components/dashboard/StudentGradeCard';
+// ...existing imports...
+
+// ...existing code...
+
+<Card className="mt-8">
+  <CardHeader>
+    <CardTitle>All Submitted Grades</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <StudentGradeCard grades={grades} />
+  </CardContent>
+</Card>
+
+// ...existing code...
