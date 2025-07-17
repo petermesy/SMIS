@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { getClasses, getSchedules, createSchedule, updateSchedule, deleteSchedule, getGradeLevelsWithSections } from '@/lib/api';
+import { getClasses, getSchedules, createSchedule, updateSchedule, deleteSchedule, getGradeLevelsWithSections, getSubjects } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,6 +38,7 @@ export const ClassScheduling = () => {
   const [schedules, setSchedules] = useState<ScheduleEntry[]>([]);
   const [grades, setGrades] = useState<any[]>([]);
   const [sections, setSections] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
   const [selectedGrade, setSelectedGrade] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -87,7 +88,18 @@ export const ClassScheduling = () => {
       setSelectedSection('');
     }
   }, [selectedGrade, grades]);
-  const subjects = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'English', 'History', 'Geography', 'Amharic'];
+  // Fetch subjects from backend
+  useEffect(() => {
+    async function fetchSubjects() {
+      try {
+        const backendSubjects = await getSubjects();
+        setSubjects(backendSubjects);
+      } catch (e) {
+        setSubjects([]);
+      }
+    }
+    fetchSubjects();
+  }, []);
   const classrooms = ['Room 101', 'Room 102', 'Room 103', 'Lab 1', 'Lab 2', 'Library'];
 
   // Fetch schedules from backend for selected grade/section
@@ -167,6 +179,14 @@ export const ClassScheduling = () => {
   };
 
   const handleSaveSchedule = async (scheduleData: Partial<ScheduleEntry>) => {
+    // Map dayOfWeek string to integer (0=Monday, 1=Tuesday, ...)
+    const dayOfWeekMap: Record<string, number> = {
+      'Monday': 0,
+      'Tuesday': 1,
+      'Wednesday': 2,
+      'Thursday': 3,
+      'Friday': 4
+    };
     // Find classId for selected grade/section
     let classId = null;
     try {
@@ -180,12 +200,24 @@ export const ClassScheduling = () => {
       return;
     }
 
+    // Build payload with all required fields for backend
+    const payload = {
+      classId,
+      subjectId: scheduleData.subjectId || scheduleData.subject || '',
+      teacherId: scheduleData.teacherId || '1', // fallback
+      dayOfWeek: typeof scheduleData.dayOfWeek === 'string' ? dayOfWeekMap[scheduleData.dayOfWeek] : scheduleData.dayOfWeek,
+      startTime: scheduleData.startTime || '',
+      endTime: scheduleData.endTime || '',
+      room: scheduleData.room || scheduleData.classroom || '',
+    };
+    console.log('Creating/updating schedule with payload:', payload);
+
     try {
       if (isEditing && selectedSchedule) {
-        await updateSchedule(selectedSchedule.id, { ...selectedSchedule, ...scheduleData, classId });
+        await updateSchedule(selectedSchedule.id, payload);
         toast.success('Schedule updated successfully');
       } else {
-        await createSchedule({ ...scheduleData, classId });
+        await createSchedule(payload);
         toast.success('Schedule created successfully');
       }
       // Re-fetch schedules from backend
@@ -193,8 +225,15 @@ export const ClassScheduling = () => {
       setSchedules(Array.isArray(backendSchedules) ? backendSchedules : backendSchedules.schedules || []);
       setIsDialogOpen(false);
       setConflicts([]);
-    } catch (e) {
-      toast.error('Failed to save schedule');
+    } catch (e: any) {
+      let errorMsg = 'Failed to save schedule';
+      if (e?.response?.data) {
+        errorMsg += ': ' + (e.response.data.details || e.response.data.error || '');
+        if (e.response.data.stack) {
+          errorMsg += '\n' + e.response.data.stack;
+        }
+      }
+      toast.error(errorMsg);
     }
   };
 
@@ -222,8 +261,8 @@ export const ClassScheduling = () => {
             </SelectTrigger>
             <SelectContent>
               {grades.map(grade => (
-                <SelectItem key={grade} value={grade}>
-                  {grade.replace('-', ' ').toUpperCase()}
+                <SelectItem key={grade.id} value={grade.id}>
+                  {grade.name ? grade.name.replace('-', ' ').toUpperCase() : '-'}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -237,7 +276,7 @@ export const ClassScheduling = () => {
             </SelectTrigger>
             <SelectContent>
               {sections.map(section => (
-                <SelectItem key={section} value={section}>{section}</SelectItem>
+                <SelectItem key={section.id} value={section.id}>{section.name ? section.name : section.id}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -248,7 +287,7 @@ export const ClassScheduling = () => {
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Calendar className="w-5 h-5" />
-            <span>Weekly Schedule - {selectedGrade.replace('-', ' ').toUpperCase()} Section {selectedSection}</span>
+            <span>Weekly Schedule - {typeof selectedGrade === 'string' ? selectedGrade.replace('-', ' ').toUpperCase() : '-'} Section {selectedSection}</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -334,12 +373,12 @@ interface ScheduleDialogProps {
   isOpen: boolean;
   onClose: () => void;
   schedule: ScheduleEntry | null;
-  onSave: (scheduleData: Partial<ScheduleEntry>) => void;
+  onSave: (scheduleData: any) => void;
   isEditing: boolean;
-  subjects: string[];
+  subjects: any[];
   classrooms: string[];
-  grades: string[];
-  sections: string[];
+  grades: any[];
+  sections: any[];
   timeSlots: string[];
   daysOfWeek: string[];
 }
@@ -357,7 +396,7 @@ const ScheduleDialog = ({
   timeSlots, 
   daysOfWeek 
 }: ScheduleDialogProps) => {
-  const [formData, setFormData] = useState<Partial<ScheduleEntry>>({});
+  const [formData, setFormData] = useState<any>({});
 
   useEffect(() => {
     if (schedule) {
@@ -369,20 +408,14 @@ const ScheduleDialog = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (formData.startTime && formData.startTime !== '') {
+    if (formData.startTime && formData.startTime !== '' && formData.subjectId) {
       const startHour = parseInt(formData.startTime.split(':')[0]);
       const endTime = `${String(startHour + 1).padStart(2, '0')}:00`;
-      
       onSave({
         ...formData,
         endTime,
-        duration: 60,
-        teacher: 'John Smith', // This should come from teacher selection
-        teacherId: '1',
       });
     }
-    
     setFormData({});
   };
 
@@ -396,15 +429,15 @@ const ScheduleDialog = ({
           <div>
             <Label htmlFor="subject">Subject</Label>
             <Select
-              value={formData.subject || ''}
-              onValueChange={(value) => setFormData({ ...formData, subject: value })}
+              value={formData.subjectId || ''}
+              onValueChange={(value) => setFormData({ ...formData, subjectId: value })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select subject" />
               </SelectTrigger>
               <SelectContent>
                 {subjects.map(subject => (
-                  <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+                  <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -422,8 +455,8 @@ const ScheduleDialog = ({
                 </SelectTrigger>
                 <SelectContent>
                   {grades.map(grade => (
-                    <SelectItem key={grade} value={grade}>
-                      {grade.replace('-', ' ').toUpperCase()}
+                    <SelectItem key={grade.id} value={grade.id}>
+                      {grade.name ? grade.name.replace('-', ' ').toUpperCase() : '-'}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -440,7 +473,7 @@ const ScheduleDialog = ({
                 </SelectTrigger>
                 <SelectContent>
                   {sections.map(section => (
-                    <SelectItem key={section} value={section}>{section}</SelectItem>
+                    <SelectItem key={section.id} value={section.id}>{section.name ? section.name : section.id}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -448,10 +481,10 @@ const ScheduleDialog = ({
           </div>
 
           <div>
-            <Label htmlFor="classroom">Classroom</Label>
+            <Label htmlFor="room">Classroom</Label>
             <Select
-              value={formData.classroom || ''}
-              onValueChange={(value) => setFormData({ ...formData, classroom: value })}
+              value={formData.room || formData.classroom || ''}
+              onValueChange={(value) => setFormData({ ...formData, room: value })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select classroom" />

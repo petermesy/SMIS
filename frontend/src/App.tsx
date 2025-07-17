@@ -18,7 +18,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Header } from "@/components/layout/Header";
-import { Dashboard } from "@/pages/Dashboard";
+import Dashboard from "@/pages/Dashboard";
 import { UserManagement } from "@/pages/UserManagement";
 import { ClassScheduling } from "@/pages/ClassScheduling";
 import ClassAssignment from "@/pages/ClassAssignment";
