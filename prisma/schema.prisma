@@ -182,7 +182,7 @@ model ClassSchedule {
   dayOfWeek  Int
   startTime  String
   endTime    String
-  room       String
+
 }
 
 model AttendanceRecord {

@@ -13,13 +13,13 @@ export const getClassSchedule = async (req: Request, res: Response) => {
 };
 
 export const createSchedule = async (req: Request, res: Response) => {
-  const { classId, subjectId, teacherId, dayOfWeek, startTime, endTime, room } = req.body;
-  if (!classId || !subjectId || !teacherId || dayOfWeek === undefined || !startTime || !endTime || !room) {
+  const { classId, subjectId, teacherId, dayOfWeek, startTime, endTime } = req.body;
+  if (!classId || !subjectId || !teacherId || dayOfWeek === undefined || !startTime || !endTime) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
   try {
     const schedule = await prisma.classSchedule.create({
-      data: { classId, subjectId, teacherId, dayOfWeek, startTime, endTime, room },
+      data: { classId, subjectId, teacherId, dayOfWeek, startTime, endTime },
     });
     res.status(201).json(schedule);
   } catch (e) {
@@ -31,11 +31,11 @@ export const createSchedule = async (req: Request, res: Response) => {
 
 export const updateSchedule = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { subjectId, teacherId, dayOfWeek, startTime, endTime, room } = req.body;
+  const { subjectId, teacherId, dayOfWeek, startTime, endTime } = req.body;
   try {
     const schedule = await prisma.classSchedule.update({
       where: { id },
-      data: { subjectId, teacherId, dayOfWeek, startTime, endTime, room },
+      data: { subjectId, teacherId, dayOfWeek, startTime, endTime },
     });
     res.json(schedule);
   } catch (e) {

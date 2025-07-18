@@ -18,7 +18,7 @@ interface ScheduleEntry {
   subject: string;
   teacher: string;
   teacherId: string;
-  classroom: string;
+  // classroom removed
   grade: string;
   section: string;
   dayOfWeek: string;
@@ -137,7 +137,7 @@ export const ClassScheduling = () => {
     }
     fetchSubjects();
   }, []);
-  const classrooms = ['Room 101', 'Room 102', 'Room 103', 'Lab 1', 'Lab 2', 'Library'];
+  // classrooms removed
 
   // Fetch schedules from backend for selected grade/section
   useEffect(() => {
@@ -170,7 +170,7 @@ export const ClassScheduling = () => {
             subjectId: sch.subject?.id || sch.subjectId || '',
             teacher: sch.teacher ? `${sch.teacher.firstName} ${sch.teacher.lastName}` : sch.teacherId || sch.teacher || '',
             teacherId: sch.teacher?.id || sch.teacherId || '',
-            classroom: sch.room || sch.classroom || '',
+            // classroom removed
           };
         });
         setSchedules(mapped);
@@ -189,19 +189,11 @@ export const ClassScheduling = () => {
     
     schedules.forEach(schedule => {
       if (schedule.id === newSchedule.id) return;
-      
       // Check teacher conflict
       if (schedule.teacherId === newSchedule.teacherId &&
           schedule.dayOfWeek === newSchedule.dayOfWeek &&
           schedule.startTime === newSchedule.startTime) {
         conflictIds.push(`teacher-${schedule.id}`);
-      }
-      
-      // Check classroom conflict
-      if (schedule.classroom === newSchedule.classroom &&
-          schedule.dayOfWeek === newSchedule.dayOfWeek &&
-          schedule.startTime === newSchedule.startTime) {
-        conflictIds.push(`classroom-${schedule.id}`);
       }
     });
     
@@ -320,7 +312,7 @@ export const ClassScheduling = () => {
                 {' - '}
                 {(teachers.find(t => t.id === sch.teacherId)?.firstName + ' ' + teachers.find(t => t.id === sch.teacherId)?.lastName || sch.teacher)}
                 {' - '}
-                {sch.dayOfWeek} {sch.startTime} - {sch.endTime} ({sch.classroom})
+                {sch.dayOfWeek} {sch.startTime} - {sch.endTime}
               </li>
             ))}
           </ul>
@@ -398,7 +390,7 @@ export const ClassScheduling = () => {
                                   <div>
                                     <div className="font-medium">{subjects.find(s => s.id === period.subject || s.id === period.subjectId)?.name || period.subject}</div>
                                     <div className="text-xs opacity-90">{teachers.find(t => t.id === period.teacherId)?.firstName + ' ' + teachers.find(t => t.id === period.teacherId)?.lastName || period.teacher}</div>
-                                    <div className="text-xs opacity-75">{period.classroom}</div>
+                                    {/* classroom removed */}
                                   </div>
                                   {(user?.role === 'admin' || user?.role === 'teacher') && (
                                     <div className="flex space-x-1 mt-1">
@@ -442,7 +434,7 @@ export const ClassScheduling = () => {
         onSave={handleSaveSchedule}
         isEditing={isEditing}
         subjects={subjects}
-        classrooms={classrooms}
+        // classrooms removed
         grades={grades}
         sections={sections}
         timeSlots={timeSlots}
@@ -602,23 +594,7 @@ const ScheduleDialog = ({
             </div>
           </div>
 
-          <div>
-            <Label htmlFor="room">Classroom</Label>
-            <Select
-              value={formData.room || formData.classroom || ''}
-              onValueChange={(value) => setFormData({ ...formData, room: value })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select classroom" />
-              </SelectTrigger>
-              <SelectContent>
-                {classrooms.map(classroom => (
-                  <SelectItem key={classroom} value={classroom}>{classroom}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
+          {/* Classroom selection removed */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="dayOfWeek">Day</Label>
