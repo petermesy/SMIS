@@ -1,6 +1,6 @@
 
-import { useState, useEffect } from 'react';
-import { getClasses, getSchedules, createSchedule, updateSchedule, deleteSchedule, getGradeLevelsWithSections, getSubjects } from '@/lib/api';
+import { useState, useEffect, useMemo } from 'react';
+import { getClasses, getSchedules, createSchedule, updateSchedule, deleteSchedule, getGradeLevelsWithSections, getSubjects, getUsers, getTeacherAssignments } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,8 +39,45 @@ export const ClassScheduling = () => {
   const [grades, setGrades] = useState<any[]>([]);
   const [sections, setSections] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
+  const [teacherAssignments, setTeacherAssignments] = useState<any[]>([]);
+  // Track selected teacher in main component for subject filtering
+  const [selectedTeacherId, setSelectedTeacherId] = useState('');
+  // Fetch teacher assignments for subject filtering
+  useEffect(() => {
+    async function fetchAssignments() {
+      try {
+        const res = await getTeacherAssignments();
+        setTeacherAssignments(res || []);
+      } catch (e) {
+        setTeacherAssignments([]);
+      }
+    }
+    fetchAssignments();
+  }, []);
+  // Memoized filtered subjects for selected teacher
+  const filteredSubjects = useMemo(() => {
+    if (!teacherAssignments.length || !subjects.length) return subjects;
+    if (!selectedTeacherId) return subjects;
+    // Find subjectIds assigned to selected teacher
+    const assigned = teacherAssignments.filter((a: any) => a.teacherId === selectedTeacherId);
+    const subjectIds = assigned.map((a: any) => a.subjectId);
+    return subjects.filter((s: any) => subjectIds.includes(s.id));
+  }, [teacherAssignments, subjects, selectedTeacherId]);
   const [selectedGrade, setSelectedGrade] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
+  const [teachers, setTeachers] = useState<any[]>([]);
+  // Fetch teachers from backend
+  useEffect(() => {
+    async function fetchTeachers() {
+      try {
+        const res = await getUsers({ role: 'TEACHER', status: 'ACTIVE' });
+        setTeachers(res.users || []);
+      } catch (e) {
+        setTeachers([]);
+      }
+    }
+    fetchTeachers();
+  }, []);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<ScheduleEntry | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -118,7 +155,25 @@ export const ClassScheduling = () => {
           return;
         }
         const backendSchedules = await getSchedules(cls.id);
-        setSchedules(Array.isArray(backendSchedules) ? backendSchedules : backendSchedules.schedules || []);
+        // Map numeric dayOfWeek to string and flatten subject/teacher fields for table rendering
+        const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        const mapped = (Array.isArray(backendSchedules) ? backendSchedules : backendSchedules.schedules || []).map(sch => {
+          let day = sch.dayOfWeek;
+          if (typeof day === 'number') {
+            day = dayNames[day] || day;
+          }
+          // Flatten subject and teacher fields if present
+          return {
+            ...sch,
+            dayOfWeek: day,
+            subject: sch.subject?.name || sch.subjectId || sch.subject || '',
+            subjectId: sch.subject?.id || sch.subjectId || '',
+            teacher: sch.teacher ? `${sch.teacher.firstName} ${sch.teacher.lastName}` : sch.teacherId || sch.teacher || '',
+            teacherId: sch.teacher?.id || sch.teacherId || '',
+            classroom: sch.room || sch.classroom || '',
+          };
+        });
+        setSchedules(mapped);
       } catch (e) {
         setSchedules([]);
       }
@@ -153,12 +208,14 @@ export const ClassScheduling = () => {
     return conflictIds;
   };
 
+  // Returns a map: { [time]: ScheduleEntry[] } for the given day
   const getScheduleForDay = (day: string) => {
     const daySchedules = filteredSchedules.filter(s => s.dayOfWeek === day);
-    return timeSlots.map(time => ({
-      time,
-      periods: daySchedules.filter(s => s.startTime === time)
-    }));
+    const map: Record<string, ScheduleEntry[]> = {};
+    timeSlots.forEach(time => {
+      map[time] = daySchedules.filter(s => s.startTime === time);
+    });
+    return map;
   };
 
   const handleCreateSchedule = () => {
@@ -252,6 +309,26 @@ export const ClassScheduling = () => {
         )}
       </div>
 
+      {/* List of all schedules */}
+      {(schedules && schedules.length > 0) ? (
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold mb-2">All Schedules</h2>
+          <ul className="list-disc pl-5">
+            {schedules.map(sch => (
+              <li key={sch.id}>
+                {(subjects.find(s => s.id === sch.subject || s.id === sch.subjectId)?.name || sch.subject)}
+                {' - '}
+                {(teachers.find(t => t.id === sch.teacherId)?.firstName + ' ' + teachers.find(t => t.id === sch.teacherId)?.lastName || sch.teacher)}
+                {' - '}
+                {sch.dayOfWeek} {sch.startTime} - {sch.endTime} ({sch.classroom})
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <div className="mb-4 text-gray-500">No schedules found.</div>
+      )}
+
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
         <div className="flex items-center space-x-2">
           <Label>Grade:</Label>
@@ -287,7 +364,10 @@ export const ClassScheduling = () => {
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Calendar className="w-5 h-5" />
-            <span>Weekly Schedule - {typeof selectedGrade === 'string' ? selectedGrade.replace('-', ' ').toUpperCase() : '-'} Section {selectedSection}</span>
+            <span>
+              Weekly Schedule - {grades.find(g => g.id === selectedGrade)?.name?.replace('-', ' ').toUpperCase() || '-'}
+              {sections.length > 0 && ` Section ${sections.find(s => s.id === selectedSection)?.name || selectedSection}`}
+            </span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -306,41 +386,44 @@ export const ClassScheduling = () => {
                   <tr key={time}>
                     <td className="border p-2 font-medium text-center bg-gray-50">{time}</td>
                     {daysOfWeek.map(day => {
-                      const daySchedule = getScheduleForDay(day);
-                      const timeSlot = daySchedule.find(slot => slot.time === time);
-                      const period = timeSlot?.periods[0];
-                      
+                      const dayScheduleMap = getScheduleForDay(day);
+                      const periods = dayScheduleMap[time] || [];
                       return (
                         <td key={`${day}-${time}`} className="border p-1 h-20 relative">
-                          {period && (
-                            <div className={`${period.color} text-white p-2 rounded text-xs h-full flex flex-col justify-between`}>
-                              <div>
-                                <div className="font-medium">{period.subject}</div>
-                                <div className="text-xs opacity-90">{period.teacher}</div>
-                                <div className="text-xs opacity-75">{period.classroom}</div>
-                              </div>
-                              {(user?.role === 'admin' || user?.role === 'teacher') && (
-                                <div className="flex space-x-1 mt-1">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleEditSchedule(period)}
-                                    className="h-5 w-5 p-0 bg-white/20 border-white/30 hover:bg-white/30"
-                                  >
-                                    <Edit className="w-2 h-2" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleDeleteSchedule(period.id)}
-                                    className="h-5 w-5 p-0 bg-white/20 border-white/30 hover:bg-white/30"
-                                  >
-                                    <Trash2 className="w-2 h-2" />
-                                  </Button>
+                          {periods.length > 0 ? (
+                            <div className="flex flex-col gap-2 h-full">
+                              {periods.map(period => (
+                                <div key={period.id} 
+                                  className="bg-yellow-200 text-gray-900 p-2 rounded text-xs flex flex-col justify-between border border-yellow-400 shadow-sm">
+                                  <div>
+                                    <div className="font-medium">{subjects.find(s => s.id === period.subject || s.id === period.subjectId)?.name || period.subject}</div>
+                                    <div className="text-xs opacity-90">{teachers.find(t => t.id === period.teacherId)?.firstName + ' ' + teachers.find(t => t.id === period.teacherId)?.lastName || period.teacher}</div>
+                                    <div className="text-xs opacity-75">{period.classroom}</div>
+                                  </div>
+                                  {(user?.role === 'admin' || user?.role === 'teacher') && (
+                                    <div className="flex space-x-1 mt-1">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleEditSchedule(period)}
+                                        className="h-5 w-5 p-0 bg-white/20 border-white/30 hover:bg-white/30"
+                                      >
+                                        <Edit className="w-2 h-2" />
+                                      </Button>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleDeleteSchedule(period.id)}
+                                        className="h-5 w-5 p-0 bg-white/20 border-white/30 hover:bg-white/30"
+                                      >
+                                        <Trash2 className="w-2 h-2" />
+                                      </Button>
+                                    </div>
+                                  )}
                                 </div>
-                              )}
+                              ))}
                             </div>
-                          )}
+                          ) : null}
                         </td>
                       );
                     })}
@@ -364,6 +447,7 @@ export const ClassScheduling = () => {
         sections={sections}
         timeSlots={timeSlots}
         daysOfWeek={daysOfWeek}
+        teachers={teachers}
       />
     </div>
   );
@@ -381,7 +465,9 @@ interface ScheduleDialogProps {
   sections: any[];
   timeSlots: string[];
   daysOfWeek: string[];
+  teachers: any[];
 }
+
 
 const ScheduleDialog = ({ 
   isOpen, 
@@ -394,17 +480,35 @@ const ScheduleDialog = ({
   grades, 
   sections, 
   timeSlots, 
-  daysOfWeek 
+  daysOfWeek, 
+  teachers
 }: ScheduleDialogProps) => {
   const [formData, setFormData] = useState<any>({});
+  const [localTeacherId, setLocalTeacherId] = useState('');
+  const [filteredSubjects, setFilteredSubjects] = useState<any[]>(subjects);
 
   useEffect(() => {
     if (schedule) {
       setFormData(schedule);
+      setLocalTeacherId(schedule.teacherId || '');
     } else {
       setFormData({});
+      setLocalTeacherId('');
     }
   }, [schedule]);
+
+  // Filter subjects by selected teacher
+  useEffect(() => {
+    if (!localTeacherId) {
+      setFilteredSubjects(subjects);
+      return;
+    }
+    // Find teacher assignments for this teacher
+    // For simplicity, assume all subjects are available if no assignments API
+    // If you have teacherAssignments prop, filter here
+    // For now, just show all subjects
+    setFilteredSubjects(subjects);
+  }, [localTeacherId, subjects]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -427,6 +531,25 @@ const ScheduleDialog = ({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
+            <Label htmlFor="teacher">Teacher</Label>
+            <Select
+              value={localTeacherId}
+              onValueChange={(value) => {
+                setLocalTeacherId(value);
+                setFormData({ ...formData, teacherId: value });
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select teacher" />
+              </SelectTrigger>
+              <SelectContent>
+                {teachers.map(teacher => (
+                  <SelectItem key={teacher.id} value={teacher.id}>{teacher.firstName} {teacher.lastName}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
             <Label htmlFor="subject">Subject</Label>
             <Select
               value={formData.subjectId || ''}
@@ -436,13 +559,12 @@ const ScheduleDialog = ({
                 <SelectValue placeholder="Select subject" />
               </SelectTrigger>
               <SelectContent>
-                {subjects.map(subject => (
+                {filteredSubjects.map(subject => (
                   <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
-          
           <div className="grid grid-cols-2 gap-4">
             <div>
               <Label htmlFor="grade">Grade</Label>

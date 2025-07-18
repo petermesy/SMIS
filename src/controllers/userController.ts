@@ -29,6 +29,7 @@ export const listUsers = async (req: Request, res: Response) => {
         phone: true,
         address: true,
         status: true,
+        gender: true,
         createdAt: true,
       },
       skip,
@@ -41,7 +42,7 @@ export const listUsers = async (req: Request, res: Response) => {
 };
 
 export const createUser = async (req: Request, res: Response) => {
-  const { email, password, firstName, lastName, role, phone, address, status } = req.body;
+  const { email, password, firstName, lastName, role, phone, address, status, gender } = req.body;
   if (!email || !password || !firstName || !lastName || !role) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
@@ -51,7 +52,7 @@ export const createUser = async (req: Request, res: Response) => {
   }
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
-    data: { email, passwordHash, firstName, lastName, role, phone, address, status: status || 'ACTIVE' },
+    data: { email, passwordHash, firstName, lastName, role, phone, address, status: status || 'ACTIVE', gender },
     select: {
       id: true,
       email: true,
@@ -61,6 +62,7 @@ export const createUser = async (req: Request, res: Response) => {
       phone: true,
       address: true,
       status: true,
+      gender: true,
       createdAt: true,
     },
   });
@@ -79,6 +81,7 @@ export const getUser = async (req: Request, res: Response) => {
       phone: true,
       address: true,
       status: true,
+      gender: true,
       createdAt: true,
     },
   });
@@ -87,11 +90,17 @@ export const getUser = async (req: Request, res: Response) => {
 };
 
 export const updateUser = async (req: Request, res: Response) => {
-  const { firstName, lastName, role, phone, address, status } = req.body;
+  const allowedFields = ['firstName', 'lastName', 'role', 'phone', 'address', 'status', 'gender'];
+  const updateData: any = {};
+  for (const field of allowedFields) {
+    if (req.body[field] !== undefined) {
+      updateData[field] = req.body[field];
+    }
+  }
   try {
     const user = await prisma.user.update({
       where: { id: req.params.id },
-      data: { firstName, lastName, role, phone, address, status },
+      data: updateData,
       select: {
         id: true,
         email: true,
@@ -101,6 +110,7 @@ export const updateUser = async (req: Request, res: Response) => {
         phone: true,
         address: true,
         status: true,
+        gender: true,
         createdAt: true,
       },
     });

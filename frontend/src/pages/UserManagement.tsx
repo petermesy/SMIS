@@ -21,7 +21,7 @@ interface UserData {
   phone?: string;
   address?: string;
   dateOfBirth?: string;
-  gender?: 'male' | 'female';
+  gender?: string;
   status: 'active' | 'inactive';
   createdAt: string;
   classId?: string;
@@ -165,6 +165,7 @@ export const UserManagement = () => {
                   <th className="text-left p-2">Email</th>
                   <th className="text-left p-2">Role</th>
                   <th className="text-left p-2">Phone</th>
+                  <th className="text-left p-2">Gender</th>
                   <th className="text-left p-2">Status</th>
                   <th className="text-left p-2">Actions</th>
                 </tr>
@@ -185,6 +186,7 @@ export const UserManagement = () => {
                       </Badge>
                     </td>
                     <td className="p-2">{user.phone || 'N/A'}</td>
+                    <td className="p-2">{user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : 'N/A'}</td>
                     <td className="p-2">
                       <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
                         {user.status}
@@ -319,6 +321,22 @@ const UserDialog = ({ isOpen, onClose, user, onSave, isEditing }: UserDialogProp
               value={formData.phone || ''}
               onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
             />
+          </div>
+          <div>
+            <Label htmlFor="gender">Gender</Label>
+            <Select
+              value={formData.gender || ''}
+              onValueChange={(value) => setFormData({ ...formData, gender: value })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select gender" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+                <SelectItem value="other">Other</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="password">Password</Label>
