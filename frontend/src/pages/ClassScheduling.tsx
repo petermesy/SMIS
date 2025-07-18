@@ -54,18 +54,25 @@ export const ClassScheduling = () => {
     }
     fetchAssignments();
   }, []);
-  // Memoized filtered subjects for selected teacher
-  const filteredSubjects = useMemo(() => {
-    if (!teacherAssignments.length || !subjects.length) return subjects;
-    if (!selectedTeacherId) return subjects;
-    // Find subjectIds assigned to selected teacher
-    const assigned = teacherAssignments.filter((a: any) => a.teacherId === selectedTeacherId);
-    const subjectIds = assigned.map((a: any) => a.subjectId);
-    return subjects.filter((s: any) => subjectIds.includes(s.id));
-  }, [teacherAssignments, subjects, selectedTeacherId]);
+  // ...existing code...
   const [selectedGrade, setSelectedGrade] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [teachers, setTeachers] = useState<any[]>([]);
+  // Memoized filtered subjects for selected teacher and selected class
+  const filteredSubjects = useMemo(() => {
+    if (!teacherAssignments.length || !subjects.length) return subjects;
+    if (!selectedTeacherId || !selectedGrade || !selectedSection) return subjects;
+    // Find the classId for the selected grade/section
+    let classId = null;
+    const classes = grades.flatMap((g: any) => g.sections?.map((s: any) => ({ gradeId: g.id, sectionId: s.id, classId: (s.classes && s.classes[0]?.id) || null })));
+    const cls = classes.find((c: any) => c && c.gradeId === selectedGrade && c.sectionId === selectedSection);
+    if (cls) classId = cls.classId;
+    if (!classId) return [];
+    // Find subjectIds assigned to selected teacher for this class
+    const assigned = teacherAssignments.filter((a: any) => a.teacherId === selectedTeacherId && a.classId === classId);
+    const subjectIds = assigned.map((a: any) => a.subjectId);
+    return subjects.filter((s: any) => subjectIds.includes(s.id));
+  }, [teacherAssignments, subjects, selectedTeacherId, selectedGrade, selectedSection, grades]);
   // Fetch teachers from backend
   useEffect(() => {
     async function fetchTeachers() {
@@ -246,6 +253,13 @@ export const ClassScheduling = () => {
 
     if (!classId) {
       toast.error('Class not found for selected grade/section');
+      return;
+    }
+
+    // Prevent duplicate schedule for same class, day, and startTime
+    const duplicate = schedules.find(sch => sch.classId === classId && sch.dayOfWeek === (typeof scheduleData.dayOfWeek === 'string' ? dayOfWeekMap[scheduleData.dayOfWeek] : scheduleData.dayOfWeek) && sch.startTime === scheduleData.startTime);
+    if (!isEditing && duplicate) {
+      toast.error('A schedule already exists for this class at the same day and time.');
       return;
     }
 
@@ -433,7 +447,7 @@ export const ClassScheduling = () => {
         schedule={selectedSchedule}
         onSave={handleSaveSchedule}
         isEditing={isEditing}
-        subjects={subjects}
+        subjects={filteredSubjects}
         // classrooms removed
         grades={grades}
         sections={sections}
@@ -477,8 +491,6 @@ const ScheduleDialog = ({
 }: ScheduleDialogProps) => {
   const [formData, setFormData] = useState<any>({});
   const [localTeacherId, setLocalTeacherId] = useState('');
-  const [filteredSubjects, setFilteredSubjects] = useState<any[]>(subjects);
-
   useEffect(() => {
     if (schedule) {
       setFormData(schedule);
@@ -488,19 +500,6 @@ const ScheduleDialog = ({
       setLocalTeacherId('');
     }
   }, [schedule]);
-
-  // Filter subjects by selected teacher
-  useEffect(() => {
-    if (!localTeacherId) {
-      setFilteredSubjects(subjects);
-      return;
-    }
-    // Find teacher assignments for this teacher
-    // For simplicity, assume all subjects are available if no assignments API
-    // If you have teacherAssignments prop, filter here
-    // For now, just show all subjects
-    setFilteredSubjects(subjects);
-  }, [localTeacherId, subjects]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -551,7 +550,7 @@ const ScheduleDialog = ({
                 <SelectValue placeholder="Select subject" />
               </SelectTrigger>
               <SelectContent>
-                {filteredSubjects.map(subject => (
+                {subjects.map(subject => (
                   <SelectItem key={subject.id} value={subject.id}>{subject.name}</SelectItem>
                 ))}
               </SelectContent>

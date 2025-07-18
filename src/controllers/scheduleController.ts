@@ -18,6 +18,17 @@ export const createSchedule = async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Missing required fields' });
   }
   try {
+    // Check for duplicate schedule for the same class, day, and startTime
+    const existing = await prisma.classSchedule.findFirst({
+      where: {
+        classId,
+        dayOfWeek,
+        startTime,
+      },
+    });
+    if (existing) {
+      return res.status(400).json({ error: 'A schedule already exists for this class at the same day and time.' });
+    }
     const schedule = await prisma.classSchedule.create({
       data: { classId, subjectId, teacherId, dayOfWeek, startTime, endTime },
     });
