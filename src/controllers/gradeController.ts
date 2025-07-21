@@ -65,6 +65,30 @@ export const getStudentGrades = async (req: Request, res: Response, next: NextFu
 
 // Get all grades for a class, subject, and category (for teacher view)
 // export const getClassGrades = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+// Get all grade levels with their sections
+export const getGradeLevelsWithSections = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Fetch all grades and their sections via classes
+    const grades = await prisma.grade.findMany({
+      include: {
+        classes: {
+          include: {
+            section: true
+          }
+        }
+      }
+    });
+    // Format: [{ id, name, sections: [{ id, name }] }]
+    const result = grades.map(g => ({
+      id: g.id,
+      name: g.name,
+      sections: g.classes.map(cls => cls.section ? { id: cls.section.id, name: cls.section.name } : null).filter(Boolean)
+    }));
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+};
 //   try {
 //     const { classId, subjectId, categoryId, semesterId, academicYearId } = req.query;
 //     const where: any = {};

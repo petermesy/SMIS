@@ -50,6 +50,9 @@ const requireTeacher: RequestHandler = (req, res, next) => {
 
 // GET /api/grades/class (for teacher: all grades for class/subject/category/semester)
 router.get('/class/all', authenticateJWT as RequestHandler, requireTeacher, getClassGrades as RequestHandler);
+// GET /api/grades/levels-with-sections
+import { getGradeLevelsWithSections } from '../controllers/gradeController';
+router.get('/levels-with-sections', authenticateJWT as RequestHandler, getGradeLevelsWithSections as RequestHandler);
 
 // POST /api/grades
 router.post(
