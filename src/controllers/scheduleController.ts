@@ -13,6 +13,10 @@ export const getClassSchedule = async (req: Request, res: Response) => {
 };
 
 export const createSchedule = async (req: Request, res: Response) => {
+  // Only allow admins to create schedules
+  if (!req.user || req.user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Only admins can create schedules.' });
+  }
   const { classId, subjectId, teacherId, dayOfWeek, startTime, endTime } = req.body;
   if (!classId || !subjectId || !teacherId || dayOfWeek === undefined || !startTime || !endTime) {
     return res.status(400).json({ error: 'Missing required fields' });

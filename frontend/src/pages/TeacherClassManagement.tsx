@@ -471,32 +471,10 @@ const handleSubmitScores = async () => {
   const weight = selectedCat ? Number(selectedCat.weight) : 100;
 
   try {
-    // For each student, check if their total exam weights < 100 before allowing submission
+    // Submit scores for each student
     for (const student of students) {
       const score = scores[student.id];
       if (score && !isNaN(Number(score))) {
-        // Calculate total weight for this student for this subject/class/semester/year
-        const studentGrades = grades.filter(
-          (g) =>
-            g.studentId === student.id &&
-            g.subjectId === assignment.subject.id &&
-            g.className === (assignment.class.grade.name + ' ' + assignment.class.section.name) &&
-            g.semester === (semesters.find(s => s.id === selectedSemester)?.name || selectedSemester)
-        );
-        const totalWeight = studentGrades.reduce((sum, g) => {
-          // Find the category for this grade
-          const cat = categories.find(c => c.name === g.examType);
-          return sum + (cat ? Number(cat.weight) : 0);
-        }, 0);
-        // If adding this exam would exceed 100, block submission
-        if (totalWeight + weight > 100) {
-          toast.error(`Cannot add score for ${student.firstName} ${student.lastName}: total exam weights would exceed 100%.`);
-          continue;
-        }
-        if (totalWeight === 100) {
-          toast.info(`Cannot add more scores for ${student.firstName} ${student.lastName}: total exam weights already 100%.`);
-          continue;
-        }
         try {
           const response = await createGrade({
             studentId: student.id,
@@ -524,31 +502,14 @@ const handleSubmitScores = async () => {
     // Refresh grades after successful submission
     if (successCount > 0) {
       try {
-        let gradesRes;
-        try {
-          gradesRes = await getClassGrades({
-            classId: assignment.class.id,
-            subjectId: assignment.subject.id,
-            categoryId: selectedCategory,
-            semesterId: selectedSemester,
-            academicYearId: selectedAcademicYear,
-          });
-          // If the response is a string and looks like HTML, treat as error
-          if (typeof gradesRes === 'string' && gradesRes.trim().startsWith('<')) {
-            throw new Error('Invalid JSON response');
-          }
-        } catch (err) {
-          // Fallback to getGrades if getClassGrades fails or returns HTML
-          gradesRes = await getGrades();
-          gradesRes = gradesRes.filter(
-            (g: any) =>
-              g.classId === assignment.class.id &&
-              g.subjectId === assignment.subject.id &&
-              g.categoryId === selectedCategory &&
-              g.semesterId === selectedSemester &&
-              g.academicYearId === selectedAcademicYear
-          );
-        }
+        const gradesRes = await getClassGrades({
+          classId: assignment.class.id,
+          subjectId: assignment.subject.id,
+          categoryId: selectedCategory,
+          semesterId: selectedSemester,
+          academicYearId: selectedAcademicYear,
+        });
+
         const mappedGrades = gradesRes.map((g: any) => ({
           id: g.id,
           studentId: g.studentId,
@@ -597,16 +558,6 @@ const handleSubmitScores = async () => {
     const weight = Number(newCategoryWeight);
     if (isNaN(weight) || weight < 1 || weight > 100) {
       toast.error('Weight must be between 1 and 100');
-      return;
-    }
-    // Calculate total weight of all existing categories for this assignment
-    const totalWeight = categories.reduce((sum, cat) => sum + Number(cat.weight || 0), 0);
-    if (totalWeight + weight > 100) {
-      toast.error('You have reached the maximum total weight of 100% for exam types.');
-      return;
-    }
-    if (totalWeight === 100) {
-      toast.info('You have already reached the maximum total weight of 100% for exam types.');
       return;
     }
     const duplicate = categories.find(

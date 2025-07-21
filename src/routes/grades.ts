@@ -5,13 +5,11 @@ import {
   getGradeCategories,
   createGradeCategory,
   getStudentGrades,
-  addGradeEntry,
   updateGrade,
   getGradeStatistics,
   listAllGrades,
   getClassGrades,
   deleteGrade,
-  listGradeLevelsWithSections,
 } from '../controllers/gradeController';
 
 const router = Router();
@@ -40,6 +38,16 @@ router.post(
 // GET /api/grades/:studentId/:subjectId
 router.get('/:studentId/:subjectId', authenticateJWT as RequestHandler, getStudentGrades as RequestHandler);
 
+
+// Middleware to require teacher role
+import type { RequestHandler } from 'express';
+const requireTeacher: RequestHandler = (req, res, next) => {
+  if ((req as any).user?.role !== 'teacher') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  next();
+};
+
 // GET /api/grades/class (for teacher: all grades for class/subject/category/semester)
 router.get('/class/all', authenticateJWT as RequestHandler, requireTeacher, getClassGrades as RequestHandler);
 
@@ -58,7 +66,7 @@ router.post(
     body('academicYearId').isString().notEmpty(),
     body('createdBy').isString().notEmpty(),
     validationErrorHandler,
-    addGradeEntry as RequestHandler
+    // addGradeEntry as RequestHandler // Removed as requested
   ]
 );
 
@@ -86,16 +94,9 @@ router.delete(
   ]
 );
 
-// GET /api/grades/levels-with-sections
-router.get('/levels-with-sections', authenticateJWT as RequestHandler, listGradeLevelsWithSections as RequestHandler);
+
 
 // Middleware to require teacher role
-function requireTeacher(req: Request, res: Response, next: NextFunction) {
-  if ((req as any).user?.role !== 'teacher') {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
-  next();
-}
 // GET /api/grades
 router.get('/', authenticateJWT as RequestHandler, listAllGrades as RequestHandler);
 

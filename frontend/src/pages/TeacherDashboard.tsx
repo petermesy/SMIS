@@ -1,5 +1,3 @@
-
-
 import { useEffect, useState } from 'react';
 import StudentGradeCard from '@/components/dashboard/StudentGradeCard';
 import { useAuth } from '@/contexts/AuthContext';

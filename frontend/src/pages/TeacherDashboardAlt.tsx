@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
+import StudentGradeCard from '@/components/dashboard/StudentGradeCard';
 import { useAuth } from '@/contexts/AuthContext';
-import { getTeacherAssignments, getStudentsByClass, getClassGrades, createGrade, getGradeCategories, getAcademicYears } from '@/lib/api';
+import { getTeacherAssignments, getStudentsByClass, getClassGrades, getGradeCategories, createGrade, getAcademicYears } from '@/lib/api';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react'; // For loading spinner
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 export default function TeacherDashboard() {
   const { user } = useAuth();
@@ -22,41 +21,19 @@ export default function TeacherDashboard() {
   const [selectedAcademicYear, setSelectedAcademicYear] = useState('');
   const [semesters, setSemesters] = useState<any[]>([]);
   const [selectedSemester, setSelectedSemester] = useState('');
-  const [loading, setLoading] = useState({
-    assignments: false,
-    students: false,
-    grades: false,
-    categories: false,
-    academicYears: false,
-  });
 
   // Fetch teacher assignments and academic years
   useEffect(() => {
-    if (user?.role !== 'teacher') return;
-
-    const fetchInitialData = async () => {
-      setLoading((prev) => ({ ...prev, assignments: true, academicYears: true }));
-      try {
-        const [assignmentsRes, academicYearsRes] = await Promise.all([
-          getTeacherAssignments(),
-          getAcademicYears(),
-        ]);
-        setAssignments(assignmentsRes || []);
-        setAcademicYears(academicYearsRes || []);
-      } catch (err) {
-        toast.error('Failed to load initial data');
-        console.error('Error fetching initial data:', err);
-      } finally {
-        setLoading((prev) => ({ ...prev, assignments: false, academicYears: false }));
-      }
-    };
-    fetchInitialData();
+    if (user?.role === 'teacher') {
+      getTeacherAssignments().then(setAssignments).catch(() => toast.error('Failed to load assignments'));
+      getAcademicYears().then(setAcademicYears).catch(() => toast.error('Failed to load academic years'));
+    }
   }, [user]);
 
   // Update semesters when academic year changes
   useEffect(() => {
     if (selectedAcademicYear) {
-      const year = academicYears.find((y) => y.id === selectedAcademicYear);
+      const year = academicYears.find((y: any) => y.id === selectedAcademicYear);
       setSemesters(year?.semesters || []);
       setSelectedSemester('');
     } else {
@@ -68,33 +45,44 @@ export default function TeacherDashboard() {
   // Fetch students for selected assignment, academic year, and semester
   useEffect(() => {
     const fetchStudents = async () => {
-      if (!selectedAssignment || !selectedAcademicYear || !selectedSemester) {
+      if (selectedAssignment && selectedAcademicYear && selectedSemester) {
+        const assignment = assignments.find(a => a.id === selectedAssignment);
+        if (assignment) {
+          const params = {
+            academicYearId: selectedAcademicYear,
+            semesterId: selectedSemester
+          };
+          console.log('Fetching students with:', {
+            classId: assignment.class.id,
+            ...params
+          });
+          try {
+            const studentsRes = await getStudentsByClass(assignment.class.id, params);
+            let fetchedStudents = [];
+            if (Array.isArray(studentsRes)) {
+              fetchedStudents = studentsRes;
+              setStudents(studentsRes);
+            } else if (studentsRes && Array.isArray(studentsRes.students)) {
+              fetchedStudents = studentsRes.students;
+              setStudents(studentsRes.students);
+            } else {
+              setStudents([]);
+            }
+            // Debug log: print students fetched from backend
+            console.log('Fetched students:', fetchedStudents);
+          } catch (err) {
+            setStudents([]);
+            toast.error('Failed to load students');
+            // Debug log: print error
+            console.error('Error fetching students:', err);
+          }
+        }
+      } else {
         setStudents([]);
-        return;
-      }
-      setLoading((prev) => ({ ...prev, students: true }));
-      const assignment = assignments.find((a) => a.id === selectedAssignment);
-      if (!assignment) {
-        setStudents([]);
-        setLoading((prev) => ({ ...prev, students: false }));
-        return;
-      }
-      try {
-        const params = { academicYearId: selectedAcademicYear, semesterId: selectedSemester };
-        const studentsRes = await getStudentsByClass(assignment.class.id, params);
-        const fetchedStudents = Array.isArray(studentsRes) ? studentsRes : studentsRes?.students || [];
-        setStudents(fetchedStudents);
-        console.log('Fetched students:', fetchedStudents);
-      } catch (err) {
-        setStudents([]);
-        toast.error('Failed to load students');
-        console.error('Error fetching students:', err);
-      } finally {
-        setLoading((prev) => ({ ...prev, students: false }));
       }
     };
     fetchStudents();
-  }, [selectedAssignment, selectedAcademicYear, selectedSemester, assignments]);
+  }, [selectedAssignment, assignments, selectedAcademicYear, selectedSemester]);
 
   // Fetch grade categories for selected assignment
   useEffect(() => {
@@ -103,88 +91,64 @@ export default function TeacherDashboard() {
         setCategories([]);
         return;
       }
-      setLoading((prev) => ({ ...prev, categories: true }));
-      const assignment = assignments.find((a) => a.id === selectedAssignment);
-      if (!assignment) {
-        setCategories([]);
-        setLoading((prev) => ({ ...prev, categories: false }));
-        return;
-      }
+      const assignment = assignments.find(a => a.id === selectedAssignment);
+      if (!assignment) return;
       try {
         const res = await getGradeCategories({
           classId: assignment.class.id,
-          subjectId: assignment.subject.id,
+          subjectId: assignment.subject.id
         });
-        setCategories(res || []);
-      } catch (err) {
+        setCategories(res);
+      } catch {
         setCategories([]);
-        toast.error('Failed to load grade categories');
-        console.error('Error fetching categories:', err);
-      } finally {
-        setLoading((prev) => ({ ...prev, categories: false }));
       }
     };
     fetchCategories();
   }, [selectedAssignment, assignments]);
 
-  // Fetch grades for selected assignment, category, semester, and academic year
+  // Fetch grades for selected assignment/category/semester/year
   useEffect(() => {
     const fetchGrades = async () => {
-      if (!selectedAssignment || !selectedCategory || !selectedAcademicYear || !selectedSemester) {
+      if (selectedAssignment && selectedCategory && selectedAcademicYear && selectedSemester) {
+        const assignment = assignments.find(a => a.id === selectedAssignment);
+        if (!assignment) return;
+        try {
+          const params = {
+            classId: assignment.class.id,
+            subjectId: assignment.subject.id,
+            categoryId: selectedCategory,
+            semesterId: selectedSemester,
+            academicYearId: selectedAcademicYear
+          };
+          console.log('getClassGrades params:', params);
+          const res = await getClassGrades(params);
+          console.log('Grades fetched from backend:', res);
+          setGrades(res);
+        } catch (err) {
+          console.error('Error fetching grades:', err);
+          setGrades([]);
+        }
+      } else {
         setGrades([]);
-        return;
-      }
-      setLoading((prev) => ({ ...prev, grades: true }));
-      const assignment = assignments.find((a) => a.id === selectedAssignment);
-      if (!assignment) {
-        setGrades([]);
-        setLoading((prev) => ({ ...prev, grades: false }));
-        return;
-      }
-      try {
-        const res = await getClassGrades({
-          classId: assignment.class.id,
-          subjectId: assignment.subject.id,
-          categoryId: selectedCategory,
-          semesterId: selectedSemester,
-          academicYearId: selectedAcademicYear,
-        });
-        setGrades(res || []);
-        console.log('Fetched grades:', res);
-      } catch (err) {
-        setGrades([]);
-        toast.error('Failed to load grades');
-        console.error('Error fetching grades:', err);
-      } finally {
-        setLoading((prev) => ({ ...prev, grades: false }));
       }
     };
     fetchGrades();
-  }, [selectedAssignment, selectedCategory, selectedAcademicYear, selectedSemester, assignments]);
+  }, [selectedAssignment, selectedCategory, assignments, selectedAcademicYear, selectedSemester]);
 
-  // Handle score input changes
   const handleScoreChange = (studentId: string, value: string) => {
-    const numValue = parseFloat(value);
-    if (value === '' || (numValue >= 0 && numValue <= 100)) {
-      setScoreInputs((inputs) => ({ ...inputs, [studentId]: value }));
-    }
+    setScoreInputs(inputs => ({ ...inputs, [studentId]: value }));
   };
 
-  // Save scores for all students
   const handleSaveScores = async () => {
-    if (!selectedAssignment || !selectedCategory || !selectedAcademicYear || !selectedSemester) {
-      toast.error('Please select class, subject, exam type, academic year, and semester');
+    if (!selectedAssignment || !selectedCategory) {
+      toast.error('Select an exam type');
       return;
     }
-    const assignment = assignments.find((a) => a.id === selectedAssignment);
-    if (!assignment) {
-      toast.error('Invalid assignment selected');
-      return;
-    }
-    let successCount = 0;
+    const assignment = assignments.find(a => a.id === selectedAssignment);
+    if (!assignment) return;
     for (const student of students) {
       const score = scoreInputs[student.id];
-      if (score && score !== '') {
+      if (score) {
         try {
           await createGrade({
             studentId: student.id,
@@ -198,25 +162,26 @@ export default function TeacherDashboard() {
             date: new Date().toISOString(),
             createdBy: user?.id,
           });
-          successCount++;
-        } catch (err) {
-          toast.error(`Failed to save score for ${student.firstName} ${student.lastName}`);
-          console.error(`Error saving score for student ${student.id}:`, err);
+        } catch {
+          toast.error(`Failed to save score for ${student.firstName}`);
         }
       }
     }
-    if (successCount > 0) {
-      toast.success(`${successCount} score(s) saved successfully!`);
-      setScoreInputs({});
-      // Refresh grades
-      const res = await getClassGrades({
-        classId: assignment.class.id,
-        subjectId: assignment.subject.id,
-        categoryId: selectedCategory,
-        semesterId: selectedSemester,
-        academicYearId: selectedAcademicYear,
-      });
-      setGrades(res || []);
+    toast.success('Scores saved!');
+    setScoreInputs({});
+    // Refresh grades
+    if (selectedAssignment && selectedCategory && selectedAcademicYear && selectedSemester) {
+      const assignment = assignments.find(a => a.id === selectedAssignment);
+      if (assignment) {
+        const res = await getClassGrades({
+          classId: assignment.class.id,
+          subjectId: assignment.subject.id,
+          categoryId: selectedCategory,
+          semesterId: selectedSemester,
+          academicYearId: selectedAcademicYear
+        });
+        setGrades(res);
+      }
     }
   };
 
@@ -224,125 +189,97 @@ export default function TeacherDashboard() {
     <div className="p-6 space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Teacher Dashboard - Student Grades</CardTitle>
+          <CardTitle>Submit & View Student Scores</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4 mb-6">
-            <Select value={selectedAcademicYear} onValueChange={setSelectedAcademicYear} disabled={loading.academicYears}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder={loading.academicYears ? 'Loading...' : 'Select Academic Year'} />
-              </SelectTrigger>
+          <div className="flex gap-4 mb-4">
+            <Select value={selectedAcademicYear} onValueChange={setSelectedAcademicYear}>
+              <SelectTrigger><SelectValue placeholder="Select Academic Year" /></SelectTrigger>
               <SelectContent>
-                {academicYears.map((year) => (
+                {academicYears.map((year: any) => (
                   <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select
-              value={selectedSemester}
-              onValueChange={setSelectedSemester}
-              disabled={!semesters.length || loading.academicYears}
-            >
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder={semesters.length ? 'Select Semester' : 'No semesters available'} />
-              </SelectTrigger>
+            <Select value={selectedSemester} onValueChange={setSelectedSemester} disabled={!semesters.length}>
+              <SelectTrigger><SelectValue placeholder="Select Semester" /></SelectTrigger>
               <SelectContent>
-                {semesters.map((sem) => (
+                {semesters.map((sem: any) => (
                   <SelectItem key={sem.id} value={sem.id}>{sem.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={selectedAssignment} onValueChange={setSelectedAssignment} disabled={loading.assignments}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder={loading.assignments ? 'Loading...' : 'Select Class & Subject'} />
-              </SelectTrigger>
+            <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
+              <SelectTrigger><SelectValue placeholder="Select Class & Subject" /></SelectTrigger>
               <SelectContent>
-                {assignments.map((a) => (
+                {assignments.map(a => (
                   <SelectItem key={a.id} value={a.id}>
                     {a.class.grade.name} {a.class.section.name} - {a.subject.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select
-              value={selectedCategory}
-              onValueChange={setSelectedCategory}
-              disabled={!categories.length || loading.categories}
-            >
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder={loading.categories ? 'Loading...' : 'Select Exam Type'} />
-              </SelectTrigger>
+            <Select value={selectedCategory} onValueChange={setSelectedCategory} disabled={!categories.length}>
+              <SelectTrigger><SelectValue placeholder="Select Exam Type" /></SelectTrigger>
               <SelectContent>
-                {categories.map((cat) => (
+                {categories.map((cat: any) => (
                   <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
-          {loading.students || loading.grades ? (
-            <div className="flex justify-center items-center h-32">
-              <Loader2 className="w-8 h-8 animate-spin" />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Submitted Grade</TableHead>
-                  <TableHead>Submit Score</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {students.length === 0 && selectedAssignment && selectedAcademicYear && selectedSemester ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center text-gray-500">
-                      No students found for this selection.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  students.map((student) => {
-                    const grade = grades.find((g) => g.studentId === student.id);
-                    return (
-                      <TableRow key={student.id}>
-                        <TableCell>{student.firstName} {student.lastName}</TableCell>
-                        <TableCell>
-                          {grade ? `${grade.pointsEarned} / ${grade.totalPoints}` : 'No score submitted'}
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            value={scoreInputs[student.id] || ''}
-                            onChange={(e) => handleScoreChange(student.id, e.target.value)}
-                            placeholder="Enter score (0-100)"
-                            className="w-24"
-                            min="0"
-                            max="100"
-                          />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          )}
+          {/* Detailed summary table: show each subject's score for each student */}
+          <table className="min-w-full text-sm mb-4">
+            <thead>
+              <tr>
+                <th className="border px-2 py-1">Student</th>
+                {/* Dynamically render subject columns */}
+                {(() => {
+                  // Get all unique subject names from grades
+                  const subjectNames = Array.from(new Set(grades.map((g: any) => g.subjectName).filter(Boolean)));
+                  return subjectNames.map(subject => (
+                    <th key={subject} className="border px-2 py-1">{subject} Score</th>
+                  ));
+                })()}
+              </tr>
+            </thead>
+            <tbody>
+              {students.length === 0 && selectedAssignment && selectedAcademicYear && selectedSemester ? (
+                <tr>
+                  <td colSpan={2} className="border px-2 py-1 text-center text-gray-500">No students found for this selection.</td>
+                </tr>
+              ) : (
+                students.map(student => {
+                  // For each subject, find the grade for this student
+                  const subjectNames = Array.from(new Set(grades.map((g: any) => g.subjectName).filter(Boolean)));
+                  return (
+                    <tr key={student.id}>
+                      <td className="border px-2 py-1">{student.firstName} {student.lastName}</td>
+                      {subjectNames.map(subject => {
+                        const grade = grades.find((g: any) => g.studentId === student.id && g.subjectName === subject);
+                        return (
+                          <td key={subject} className="border px-2 py-1">{grade ? `${grade.pointsEarned || grade.score} / ${grade.totalPoints || grade.maxScore}` : '-'}</td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
 
-          <div className="mt-4">
-            <Button
-              onClick={handleSaveScores}
-              disabled={
-                students.length === 0 ||
-                !selectedAssignment ||
-                !selectedCategory ||
-                !selectedAcademicYear ||
-                !selectedSemester ||
-                Object.values(scoreInputs).every((score) => !score)
-              }
-            >
-              Save Scores
-            </Button>
-          </div>
+          <Button onClick={handleSaveScores} disabled={students.length === 0}>Save Scores</Button>
+        </CardContent>
+      </Card>
+
+      {/* Card for all submitted grades */}
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>All Submitted Grades</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <StudentGradeCard grades={grades} />
         </CardContent>
       </Card>
     </div>

@@ -189,7 +189,16 @@ export const ClassScheduling = () => {
   }, [selectedGrade, selectedSection]);
 
   // No need to filter by grade/section anymore, as schedules are fetched per class
-  const filteredSchedules = schedules;
+  let filteredSchedules = schedules;
+  if (user?.role === 'teacher') {
+    filteredSchedules = schedules.filter(sch => sch.teacherId === user.id);
+  } else if (user?.role === 'student') {
+    // For students, only show schedules for their class
+    // Assume user.classId is available, otherwise fallback to all
+    if (user.classId) {
+      filteredSchedules = schedules.filter(sch => sch.classId === user.classId);
+    }
+  }
 
   const checkConflicts = (newSchedule: ScheduleEntry) => {
     const conflictIds: string[] = [];
@@ -307,7 +316,7 @@ export const ClassScheduling = () => {
           <h1 className="text-3xl font-bold text-gray-900">Class Scheduling</h1>
           <p className="text-gray-600">Create and manage class timetables</p>
         </div>
-        {(user?.role === 'admin' || user?.role === 'teacher') && (
+        {user?.role === 'admin' && (
           <Button onClick={handleCreateSchedule} className="flex items-center space-x-2">
             <Plus className="w-4 h-4" />
             <span>Add Schedule</span>
@@ -315,7 +324,7 @@ export const ClassScheduling = () => {
         )}
       </div>
 
-      {/* List of all schedules */}
+      {/* List of all schedules
       {(schedules && schedules.length > 0) ? (
         <div className="mb-4">
           <h2 className="text-lg font-semibold mb-2">All Schedules</h2>
@@ -333,7 +342,7 @@ export const ClassScheduling = () => {
         </div>
       ) : (
         <div className="mb-4 text-gray-500">No schedules found.</div>
-      )}
+      )} */}
 
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
         <div className="flex items-center space-x-2">
