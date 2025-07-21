@@ -112,10 +112,12 @@ export default function StudentGrades() {
                 const semesterName = grade.semester?.name || semesterMap[grade.semesterId] || grade.semesterId;
                 // Academic year: prefer grade.class.academicYear.name, then map, then id
                 const academicYearName = grade.class?.academicYear?.name || academicYearMap[grade.class?.academicYearId] || grade.class?.academicYearId || '';
+                // Show exam type name if available
+                const examTypeName = category ? category.name : (grade.category?.name || grade.categoryId);
                 return (
                   <tr key={grade.id}>
                     <td className="border px-2 py-1">{subject ? subject.name : grade.subjectId}</td>
-                    <td className="border px-2 py-1">{category ? category.name : grade.categoryId}</td>
+                    <td className="border px-2 py-1">{examTypeName}</td>
                     <td className="border px-2 py-1">{grade.pointsEarned}</td>
                     <td className="border px-2 py-1">{grade.totalPoints}</td>
                     <td className="border px-2 py-1">{semesterName}</td>

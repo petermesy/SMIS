@@ -1,7 +1,7 @@
+import { useEffect, useState } from 'react';
+import { getUsers, getClasses, getGrades } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { StatsCard } from '@/components/dashboard/StatsCard';
-import { useEffect, useState } from 'react';
-import { getUsers, getClasses } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import StudentGrades from './StudentGrades';
 import TeacherDashboard from './TeacherDashboard';
@@ -142,40 +142,66 @@ const AdminDashboard = () => {
 
 const TeacherDashboardWrapper = () => <TeacherDashboard />;
 
+const StudentDashboardContent = () => {
+  const { user } = useAuth();
+  const [averageGrade, setAverageGrade] = useState<number | null>(null);
+  const [attendanceRate, setAttendanceRate] = useState<string>('96.2%'); // Placeholder, replace with real if available
+  const [todaysClasses, setTodaysClasses] = useState<number>(6); // Placeholder, replace with real if available
+  const [assignmentsDue, setAssignmentsDue] = useState<number>(3); // Placeholder, replace with real if available
+
+  useEffect(() => {
+    async function fetchGrades() {
+      if (user?.role === 'student') {
+        const grades = await getGrades();
+        const studentGrades = grades.filter((g: any) => g.studentId === user.id);
+        const totalEarned = studentGrades.reduce((sum: number, g: any) => sum + (g.pointsEarned || 0), 0);
+        const totalPossible = studentGrades.reduce((sum: number, g: any) => sum + (g.totalPoints || 0), 0);
+        const avg = totalPossible > 0 ? (totalEarned / totalPossible) * 100 : null;
+        setAverageGrade(avg);
+      }
+    }
+    fetchGrades();
+  }, [user]);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Student Dashboard</h1>
+        <p className="text-gray-600">Welcome back! Your average grade is {averageGrade !== null ? `${averageGrade.toFixed(2)}%` : '...'}.</p>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatsCard
+          title="Attendance Rate"
+          value={attendanceRate}
+          icon={UserCheck}
+          color="green"
+        />
+        <StatsCard
+          title="Average Grade"
+          value={averageGrade !== null ? `${averageGrade.toFixed(2)}%` : '...'}
+          icon={TrendingUp}
+          color="blue"
+        />
+        <StatsCard
+          title="Today's Classes"
+          value={todaysClasses.toString()}
+          icon={BookOpen}
+          color="yellow"
+        />
+        <StatsCard
+          title="Assignments Due"
+          value={assignmentsDue.toString()}
+          icon={FileText}
+          color="red"
+        />
+      </div>
+      <StudentGrades />
+    </div>
+  );
+};
+
 const StudentDashboard = () => (
-  <div className="space-y-6">
-    <div>
-      <h1 className="text-3xl font-bold text-gray-900">Student Dashboard</h1>
-      <p className="text-gray-600">Welcome back! Let's make today count.</p>
-    </div>
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      <StatsCard
-        title="Attendance Rate"
-        value="96.2%"
-        icon={UserCheck}
-        color="green"
-      />
-      <StatsCard
-        title="Average Grade"
-        value="87.5%"
-        icon={TrendingUp}
-        color="blue"
-      />
-      <StatsCard
-        title="Today's Classes"
-        value="6"
-        icon={BookOpen}
-        color="yellow"
-      />
-      <StatsCard
-        title="Assignments Due"
-        value="3"
-        icon={FileText}
-        color="red"
-      />
-    </div>
-    <StudentGrades />
-  </div>
+  <StudentDashboardContent />
 );
 
 const ParentDashboard = () => (
