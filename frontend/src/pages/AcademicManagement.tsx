@@ -1088,11 +1088,10 @@ export const AcademicManagement = () => {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="subjects">Subjects</TabsTrigger>
-          <TabsTrigger value="grades">My Grades</TabsTrigger>
           <TabsTrigger value="all-grades">All Grades</TabsTrigger>
           <TabsTrigger value="exams">Examinations</TabsTrigger>
           <TabsTrigger value="academic-years">Academic Years</TabsTrigger>
-        </TabsList>
+        </TabsList> 
 
         <TabsContent value="subjects" className="space-y-4">
           <div className="flex justify-between items-center">
