@@ -187,6 +187,7 @@ export default function TeacherDashboard() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Scores Section */}
       <Card>
         <CardHeader>
           <CardTitle>Submit & View Student Scores</CardTitle>

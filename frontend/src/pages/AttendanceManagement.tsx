@@ -119,15 +119,21 @@ export const AttendanceManagement = () => {
     const fetchStudents = async () => {
       if (selectedSubject) {
         try {
-          const subject = teacherSubjects.find(s => s.id === selectedSubject);
-          if (subject) {
-            // Assuming subject.id is classId for this API
-            const students = await getStudentsByClass(subject.id);
+          // Find the assignment for the selected subject
+          const assignment = teacherSubjects.find(s => s.id === selectedSubject);
+          // Use assignment.classId if available, else fallback to assignment.id
+          const classId = assignment?.classId || assignment?.id;
+          if (classId) {
+            const students = await getStudentsByClass(classId);
             setStudents(students);
+          } else {
+            setStudents([]);
           }
         } catch (e) {
           toast.error('Failed to load students');
         }
+      } else {
+        setStudents([]);
       }
     };
     fetchStudents();
@@ -163,19 +169,20 @@ export const AttendanceManagement = () => {
       return;
     }
     try {
-      const subject = teacherSubjects.find(s => s.id === selectedSubject);
-      if (!subject) return;
+      const assignment = teacherSubjects.find(s => s.id === selectedSubject);
+      if (!assignment) return;
       const dateString = selectedDate.toISOString().split('T')[0];
       await apiMarkAttendance({
         studentId,
-        classId: subject.id,
-        subjectId: subject.id,
+        classId: assignment.classId,
+        subjectId: assignment.subjectId,
         date: dateString,
         period: parseInt(selectedPeriod),
-        status,
+        status: status.toUpperCase(),
+        markedBy: user?.id,
       });
       // Refresh attendance after marking
-      const records = await getAttendance(subject.id, dateString);
+      const records = await getAttendance(assignment.classId, dateString);
       setAttendance(records);
       toast.success(`Attendance marked as ${status}`);
     } catch (e) {
@@ -266,12 +273,25 @@ export const AttendanceManagement = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
-          <CardContent className="flex items-center p-6">
-            <Users className="h-8 w-8 text-blue-600" />
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Students</p>
-              <p className="text-2xl font-bold">{stats.totalStudents}</p>
+          <CardContent className="p-6">
+            <div className="flex items-center">
+              <Users className="h-8 w-8 text-blue-600" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Students</p>
+                <p className="text-2xl font-bold">{stats.totalStudents}</p>
+              </div>
             </div>
+            {/* Show student names for selected subject/class */}
+            {filteredStudents.length > 0 && (
+              <div className="mt-4">
+                {/* <p className="text-sm font-semibold text-gray-700 mb-2">Student List:</p> */}
+                {/* <ul className="list-disc ml-6">
+                  {filteredStudents.map(student => (
+                    <li key={student.id} className="text-sm text-gray-800">{student.firstName} {student.lastName}</li>
+                  ))}
+                </ul> */}
+              </div>
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -355,7 +375,7 @@ export const AttendanceManagement = () => {
           <CardHeader>
             <CardTitle>Mark Attendance</CardTitle>
             {selectedSubject && selectedPeriod && (
-              <div className="text-sm text-gray-600">
+              <div className="text-sm text-gray-600 mb-2">
                 {getSelectedSubjectName()} - Period {selectedPeriod} - {dateString}
               </div>
             )}
