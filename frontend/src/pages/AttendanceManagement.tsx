@@ -22,11 +22,12 @@ interface AttendanceRecord {
   id: string;
   studentId: string;
   date: string;
-  status: 'present' | 'absent' | 'late' | 'excused';
-  subject?: string;
+  status: string;
+  subjectId?: string;
+  classId?: string;
   period?: number;
   remarks?: string;
-  markedBy: string;
+  markedById: string;
   markedAt: string;
 }
 
@@ -80,17 +81,18 @@ export const AttendanceManagement = () => {
 
   const filteredStudents = getFilteredStudents();
   const dateString = selectedDate.toISOString().split('T')[0];
+  const assignment = teacherSubjects.find(s => s.id === selectedSubject);
   const todayAttendance = attendance.filter(
-    a => a.date === dateString && 
-         a.subject === getSelectedSubjectName() &&
-         (selectedPeriod ? a.period === parseInt(selectedPeriod) : true)
+    a => a.date && a.date.slice(0, 10) === dateString &&
+         (selectedPeriod ? a.period === parseInt(selectedPeriod) : true) &&
+         (assignment ? a.subjectId === assignment.subjectId && a.classId === assignment.classId : true)
   );
 
   const calculateStats = () => {
     const total = filteredStudents.length;
-    const present = todayAttendance.filter(a => a.status === 'present').length;
-    const absent = todayAttendance.filter(a => a.status === 'absent').length;
-    const late = todayAttendance.filter(a => a.status === 'late').length;
+    const present = todayAttendance.filter(a => a.status && a.status.toUpperCase() === 'PRESENT').length;
+    const absent = todayAttendance.filter(a => a.status && a.status.toUpperCase() === 'ABSENT').length;
+    const late = todayAttendance.filter(a => a.status && a.status.toUpperCase() === 'LATE').length;
     const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
 
     setStats({ totalStudents: total, present, absent, late, percentage });
@@ -102,6 +104,7 @@ export const AttendanceManagement = () => {
       if (user?.role === 'teacher') {
         try {
           const subjects = await getTeacherAssignments();
+          console.log('teacherSubjects:', subjects); // Debug log
           setTeacherSubjects(subjects);
           if (subjects.length > 0) {
             setSelectedSubject(subjects[0].id);
@@ -148,6 +151,7 @@ export const AttendanceManagement = () => {
           if (subject) {
             const dateString = selectedDate.toISOString().split('T')[0];
             const records = await getAttendance(subject.id, dateString);
+            console.log('Attendance records after fetch:', records); // Debug log
             setAttendance(records);
           }
         } catch (e) {
@@ -183,6 +187,7 @@ export const AttendanceManagement = () => {
       });
       // Refresh attendance after marking
       const records = await getAttendance(assignment.classId, dateString);
+      console.log('Attendance records after marking:', records); // Debug log
       setAttendance(records);
       toast.success(`Attendance marked as ${status}`);
     } catch (e) {
@@ -191,19 +196,22 @@ export const AttendanceManagement = () => {
   };
 
   const getStudentAttendance = (studentId: string) => {
+    const assignment = teacherSubjects.find(s => s.id === selectedSubject);
+    if (!assignment) return undefined;
     return todayAttendance.find(
-      a => a.studentId === studentId && 
-           a.period === parseInt(selectedPeriod) && 
-           a.subject === getSelectedSubjectName()
+      a => a.studentId === studentId &&
+           a.period === parseInt(selectedPeriod) &&
+           a.subjectId === assignment.subjectId &&
+           a.classId === assignment.classId
     );
   };
 
   const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'present': return 'bg-green-100 text-green-800';
-      case 'absent': return 'bg-red-100 text-red-800';
-      case 'late': return 'bg-yellow-100 text-yellow-800';
-      case 'excused': return 'bg-blue-100 text-blue-800';
+    switch (status.toUpperCase()) {
+      case 'PRESENT': return 'bg-green-100 text-green-800';
+      case 'ABSENT': return 'bg-red-100 text-red-800';
+      case 'LATE': return 'bg-yellow-100 text-yellow-800';
+      case 'EXCUSED': return 'bg-blue-100 text-blue-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -347,7 +355,7 @@ export const AttendanceManagement = () => {
                     <SelectContent>
                       {teacherSubjects.map(subject => (
                         <SelectItem key={subject.id} value={subject.id}>
-                          {subject.name} - {(subject.grade ? subject.grade.replace('-', ' ').toUpperCase() : 'N/A')} {subject.section}
+                          {subject.name ? subject.name : (subject.subject && subject.subject.name ? subject.subject.name : 'Unknown')} - {(subject.grade ? subject.grade.replace('-', ' ').toUpperCase() : '')} {subject.section}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -403,13 +411,21 @@ export const AttendanceManagement = () => {
                           <p className="text-sm text-gray-600">Roll: {student.rollNumber}</p>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
+                      <div className="flex flex-col items-end space-y-1 min-w-[180px]">
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="text-xs font-semibold text-gray-500">Current Status:</span>
+                          {attendanceRecord ? (
+    <Badge className={`px-3 py-1 text-base font-bold ${getStatusColor(attendanceRecord.status)}`}>
+      {attendanceRecord.status.charAt(0) + attendanceRecord.status.slice(1).toLowerCase()}
+    </Badge>
+                          ) : (
+                            <Badge className="bg-gray-100 text-gray-800 px-3 py-1 text-base font-bold">Not Marked</Badge>
+                          )}
+                        </div>
                         {attendanceRecord && (
-                          <Badge className={getStatusColor(attendanceRecord.status)}>
-                            {attendanceRecord.status}
-                          </Badge>
+                          <span className="text-xs text-gray-400">Marked at: {new Date(attendanceRecord.markedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                         )}
-                        <div className="flex space-x-1">
+                        <div className="flex space-x-1 mt-1">
                           <Button
                             size="sm"
                             variant={attendanceRecord?.status === 'present' ? 'default' : 'outline'}
