@@ -77,7 +77,7 @@ export const Sidebar = () => {
             <div className="flex items-center space-x-2">
               <GraduationCap className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               <div className="text-sm">
-                <p className="font-semibold text-gray-900 dark:text-gray-100">Sawla Secondary</p>
+                <p className="font-semibold text-gray-900 dark:text-gray-100">Mahtot Primary School</p>
                 <p className="text-gray-600 dark:text-gray-400">SMIS</p>
               </div>
             </div>

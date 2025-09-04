@@ -1,3 +1,4 @@
+
 import { Router, RequestHandler } from 'express';
 import { authenticateJWT, requireRole, AuthRequest } from '../middlewares/auth';
 import { body, validationResult } from 'express-validator';
@@ -7,9 +8,27 @@ import {
   getUser,
   updateUser,
   deleteUser,
+  changePassword,
 } from '../controllers/userController';
 
 const router = Router();
+
+// POST /api/users/change-password - Change password for logged-in user
+router.post(
+  '/change-password',
+  authenticateJWT,
+  body('oldPassword').isString().notEmpty(),
+  body('newPassword').isLength({ min: 6 }),
+  (req, res, next) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    next();
+  },
+  changePassword as RequestHandler
+);
+
 
 // Validation middleware
 const userValidation = [

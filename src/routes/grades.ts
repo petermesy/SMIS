@@ -55,6 +55,7 @@ import { getGradeLevelsWithSections } from '../controllers/gradeController';
 router.get('/levels-with-sections', authenticateJWT as RequestHandler, getGradeLevelsWithSections as RequestHandler);
 
 // POST /api/grades
+import { addGradeEntry } from '../controllers/gradeController';
 router.post(
   '/',
   [
@@ -69,7 +70,7 @@ router.post(
     body('academicYearId').isString().notEmpty(),
     body('createdBy').isString().notEmpty(),
     validationErrorHandler,
-    // addGradeEntry as RequestHandler // Removed as requested
+    addGradeEntry as RequestHandler
   ]
 );
 

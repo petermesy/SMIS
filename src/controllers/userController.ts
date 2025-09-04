@@ -1,3 +1,18 @@
+// Change password for logged-in user
+export const changePassword = async (req: Request, res: Response) => {
+  const userId = (req as any).user?.id; // user from JWT middleware
+  const { oldPassword, newPassword } = req.body;
+  if (!userId || !oldPassword || !newPassword) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const valid = await bcrypt.compare(oldPassword, user.passwordHash);
+  if (!valid) return res.status(401).json({ error: 'Old password is incorrect' });
+  const newHash = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash: newHash } });
+  res.json({ message: 'Password changed successfully' });
+};
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';

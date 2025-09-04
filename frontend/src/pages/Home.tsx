@@ -82,7 +82,6 @@ export const Home = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">SMIS</h1>
-                <p className="text-xs text-gray-600">Sawla Secondary School</p>
               </div>
             </div>
             <Button onClick={() => setShowLoginForm(true)} className="bg-blue-600 hover:bg-blue-700">
@@ -106,7 +105,9 @@ export const Home = () => {
           </h1>
           <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
             Streamline your school operations with our comprehensive SMIS designed specifically for 
-            Sawla Secondary and Preparatory School. Manage students, teachers, academics, and communications 
+            {/* Sawla Secondary and Preparatory School.  */}
+            {/* Mahtot Primary School.  */}
+            Manage students, teachers, academics, and communications 
             all in one secure platform.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -223,7 +224,7 @@ export const Home = () => {
             Ready to Transform Your School Management?
           </h2>
           <p className="text-xl text-blue-100 mb-8">
-            Join Sawla Secondary and Preparatory School in experiencing the future of education management.
+            {/* Join Mahtot Primary School in experiencing the future of education management. */}
           </p>
           <Button 
             size="lg" 
@@ -247,7 +248,8 @@ export const Home = () => {
                 </div>
                 <div>
                   <h3 className="text-lg font-bold">SMIS</h3>
-                  <p className="text-sm text-gray-400">Sawla Secondary & Preparatory School</p>
+                  <p className="text-sm text-gray-400">Mahtot Primary School</p>
+                  {/* <p className="text-sm text-gray-400">Sawla Secondary & Preparatory School</p> */}
                 </div>
               </div>
               <p className="text-gray-400 mb-4">
@@ -275,7 +277,8 @@ export const Home = () => {
             </div>
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 Sawla Secondary and Preparatory School. All rights reserved.</p>
+            {/* <p>&copy; 2024 Sawla Secondary and Preparatory School. All rights reserved.</p> */}
+            <p>&copy; 2024 Mahtot Primary School. All rights reserved.</p>
           </div>
         </div>
       </footer>

@@ -1,3 +1,8 @@
+// Change password for logged-in user
+export async function changePassword(oldPassword: string, newPassword: string) {
+  const res = await api.post('/users/change-password', { oldPassword, newPassword });
+  return res.data;
+}
 // Get all grade entries (student scores, not grade levels)
 export async function getGrades() {
   try {

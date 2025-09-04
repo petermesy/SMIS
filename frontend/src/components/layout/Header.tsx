@@ -36,6 +36,8 @@ export const Header = () => {
   return (
     <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4">
       <div className="flex items-center justify-between">
+        {/* Logo */}
+        <img src="/logo.png" alt="SMIS Logo" className="h-10 w-auto mr-6" />
         <div className="flex-1 max-w-md">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />

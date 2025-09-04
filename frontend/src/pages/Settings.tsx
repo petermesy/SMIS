@@ -1,3 +1,73 @@
+import { changePassword } from '@/lib/api';
+// Change Password Form Component
+function ChangePasswordForm() {
+  const [oldPassword, setOldPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!oldPassword || !newPassword || !confirmPassword) {
+      return toast.error('Please fill in all fields');
+    }
+    if (newPassword !== confirmPassword) {
+      return toast.error('New passwords do not match');
+    }
+    setLoading(true);
+    try {
+      await changePassword(oldPassword, newPassword);
+      toast.success('Password changed successfully');
+      setOldPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Failed to change password');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
+      <div>
+        <Label htmlFor="oldPassword">Current Password</Label>
+        <Input
+          id="oldPassword"
+          type="password"
+          value={oldPassword}
+          onChange={e => setOldPassword(e.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="newPassword">New Password</Label>
+        <Input
+          id="newPassword"
+          type="password"
+          value={newPassword}
+          onChange={e => setNewPassword(e.target.value)}
+          required
+        />
+      </div>
+      <div>
+        <Label htmlFor="confirmPassword">Confirm New Password</Label>
+        <Input
+          id="confirmPassword"
+          type="password"
+          value={confirmPassword}
+          onChange={e => setConfirmPassword(e.target.value)}
+          required
+        />
+      </div>
+      <div className="flex justify-end">
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Changing...' : 'Change Password'}
+        </Button>
+      </div>
+    </form>
+  );
+}
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -696,6 +766,13 @@ export const Settings = () => {
                   <Save className="w-4 h-4 mr-2" />
                   Save Security Settings
                 </Button>
+              </div>
+
+              {/* Change Password Form */}
+              <Separator className="my-6" />
+              <div>
+                <h3 className="font-medium text-lg mb-4">Change Password</h3>
+                <ChangePasswordForm />
               </div>
             </CardContent>
           </Card>

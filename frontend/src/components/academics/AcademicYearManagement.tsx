@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { getAcademicYears, createAcademicYear, createSemester, getSemesters } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,56 +46,51 @@ export const AcademicYearManagement = () => {
   const [isEditingYear, setIsEditingYear] = useState(false);
   const [isEditingSemester, setIsEditingSemester] = useState(false);
 
-  // Mock data
+  // Fetch academic years and semesters from backend
   useEffect(() => {
-    const mockAcademicYears: AcademicYear[] = [
-      {
-        id: '1',
-        name: '2023-2024',
-        startDate: '2023-09-01',
-        endDate: '2024-06-30',
-        status: 'completed',
-        description: 'Academic Year 2023-2024',
-        createdAt: '2023-08-01T00:00:00Z',
-      },
-      {
-        id: '2',
-        name: '2024-2025',
-        startDate: '2024-09-01',
-        endDate: '2025-06-30',
-        status: 'active',
-        description: 'Current Academic Year 2024-2025',
-        createdAt: '2024-08-01T00:00:00Z',
-      },
-    ];
+    async function fetchData() {
+      try {
+        // Fetch years
+        const years = await getAcademicYears();
+        const mappedYears = years.map((y: any) => {
+          let status: 'active' | 'completed' | 'upcoming' = 'upcoming';
+          const now = new Date();
+          const start = new Date(y.startDate);
+          const end = new Date(y.endDate);
+          if (now > end) status = 'completed';
+          else if (y.isCurrent) status = 'active';
+          else if (now < start) status = 'upcoming';
+          else status = 'active';
+          return { ...y, status };
+        });
+        setAcademicYears(mappedYears);
 
-    const mockSemesters: Semester[] = [
-      {
-        id: '1',
-        name: 'First Semester',
-        yearId: '2',
-        yearName: '2024-2025',
-        startDate: '2024-09-01',
-        endDate: '2024-12-20',
-        status: 'completed',
-        description: 'First Semester of 2024-2025',
-        createdAt: '2024-08-01T00:00:00Z',
-      },
-      {
-        id: '2',
-        name: 'Second Semester',
-        yearId: '2',
-        yearName: '2024-2025',
-        startDate: '2025-01-08',
-        endDate: '2025-06-30',
-        status: 'active',
-        description: 'Second Semester of 2024-2025',
-        createdAt: '2024-08-01T00:00:00Z',
-      },
-    ];
-
-    setAcademicYears(mockAcademicYears);
-    setSemesters(mockSemesters);
+        // Fetch semesters
+        const semestersRes = await getSemesters();
+        const mappedSemesters = semestersRes.map((s: any) => {
+          let status: 'active' | 'completed' | 'upcoming' = 'upcoming';
+          const now = new Date();
+          const start = new Date(s.startDate);
+          const end = new Date(s.endDate);
+          if (now > end) status = 'completed';
+          else if (s.isCurrent) status = 'active';
+          else if (now < start) status = 'upcoming';
+          else status = 'active';
+          // Find year name
+          const year = mappedYears.find((y: any) => y.id === s.academicYearId || y.id === s.yearId);
+          return {
+            ...s,
+            yearId: s.academicYearId || s.yearId,
+            yearName: year ? year.name : '',
+            status,
+          };
+        });
+        setSemesters(mappedSemesters);
+      } catch (err) {
+        toast.error('Failed to load academic years or semesters');
+      }
+    }
+    fetchData();
   }, []);
 
   const handleCreateYear = () => {
@@ -119,20 +115,28 @@ export const AcademicYearManagement = () => {
     toast.success('Academic year deleted successfully');
   };
 
-  const handleSaveYear = (yearData: any) => {
-    if (isEditingYear && selectedYear) {
-      setAcademicYears(academicYears.map(y => 
-        y.id === selectedYear.id ? { ...y, ...yearData } : y
-      ));
-      toast.success('Academic year updated successfully');
-    } else {
-      const newYear: AcademicYear = {
-        id: Date.now().toString(),
-        ...yearData,
-        createdAt: new Date().toISOString(),
-      };
-      setAcademicYears([...academicYears, newYear]);
-      toast.success('Academic year created successfully');
+  const handleSaveYear = async (yearData: any) => {
+    try {
+      if (isEditingYear && selectedYear) {
+        // TODO: Implement updateAcademicYear API call if available
+        toast.info('Academic year update not implemented');
+      } else {
+        const payload = { ...yearData, createdBy: user?.id };
+        const newYear = await createAcademicYear(payload);
+        // Map status for new year
+        let status: 'active' | 'completed' | 'upcoming' = 'upcoming';
+        const now = new Date();
+        const start = new Date(newYear.startDate);
+        const end = new Date(newYear.endDate);
+        if (now > end) status = 'completed';
+        else if (newYear.isCurrent) status = 'active';
+        else if (now < start) status = 'upcoming';
+        else status = 'active';
+        setAcademicYears((prev) => [...prev, { ...newYear, status }]);
+        toast.success('Academic year created successfully');
+      }
+    } catch (err: any) {
+      toast.error('Failed to save academic year');
     }
     setIsYearDialogOpen(false);
   };
@@ -154,27 +158,48 @@ export const AcademicYearManagement = () => {
     toast.success('Semester deleted successfully');
   };
 
-  const handleSaveSemester = (semesterData: any) => {
-    const selectedAcademicYear = academicYears.find(y => y.id === semesterData.yearId);
-    
-    if (isEditingSemester && selectedSemester) {
-      setSemesters(semesters.map(s => 
-        s.id === selectedSemester.id ? { 
-          ...s, 
-          ...semesterData,
-          yearName: selectedAcademicYear?.name || ''
-        } : s
-      ));
-      toast.success('Semester updated successfully');
-    } else {
-      const newSemester: Semester = {
-        id: Date.now().toString(),
-        ...semesterData,
-        yearName: selectedAcademicYear?.name || '',
-        createdAt: new Date().toISOString(),
-      };
-      setSemesters([...semesters, newSemester]);
-      toast.success('Semester created successfully');
+  const handleSaveSemester = async (semesterData: any) => {
+    try {
+      if (isEditingSemester && selectedSemester) {
+        // TODO: Implement updateSemester API call if available
+        toast.info('Semester update not implemented');
+      } else {
+        // Map frontend yearId to backend academicYearId
+        const payload = {
+          name: semesterData.name,
+          academicYearId: semesterData.yearId,
+          startDate: semesterData.startDate,
+          endDate: semesterData.endDate,
+          isCurrent: semesterData.status === 'active',
+        };
+        await createSemester(payload);
+        // Refetch semesters from backend to ensure UI is in sync
+        const semestersRes = await getSemesters();
+        const mappedSemesters = semestersRes.map((s: any) => {
+          let status: 'active' | 'completed' | 'upcoming' = 'upcoming';
+          const now = new Date();
+          const start = new Date(s.startDate);
+          const end = new Date(s.endDate);
+          if (now > end) status = 'completed';
+          else if (s.isCurrent) status = 'active';
+          else if (now < start) status = 'upcoming';
+          else status = 'active';
+          // Find year name
+          const year = academicYears.find((y: any) => y.id === s.academicYearId || y.id === s.yearId);
+          return {
+            ...s,
+            yearId: s.academicYearId || s.yearId,
+            yearName: year ? year.name : '',
+            status,
+          };
+        });
+        setSemesters(mappedSemesters);
+        toast.success('Semester created successfully');
+      }
+    } catch (err: any) {
+      let message = 'Failed to save semester';
+      if (err?.response?.data?.error) message = err.response.data.error;
+      toast.error(message);
     }
     setIsSemesterDialogOpen(false);
   };
