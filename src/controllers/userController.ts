@@ -1,3 +1,59 @@
+import fs from 'fs';
+import { parse } from 'csv-parse';
+// Bulk import students from CSV
+export const importStudents = async (req: Request, res: Response) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  const results: any[] = [];
+  const errors: any[] = [];
+  const filePath = req.file.path;
+  fs.createReadStream(filePath)
+    .pipe(parse({ columns: true, trim: true }))
+    .on('data', (row) => {
+      results.push(row);
+    })
+    .on('end', async () => {
+      let successCount = 0;
+      for (const row of results) {
+        try {
+          // Required fields: firstName, lastName, email
+          if (!row.firstName || !row.lastName || !row.email) {
+            errors.push({ row, error: 'Missing required fields' });
+            continue;
+          }
+          // Check for existing email
+          const existing = await prisma.user.findUnique({ where: { email: row.email } });
+          if (existing) {
+            errors.push({ row, error: 'Email already exists' });
+            continue;
+          }
+          // Default password: lastName+123 (should be changed by user)
+          const passwordHash = await bcrypt.hash((row.lastName || 'student') + '123', 10);
+          await prisma.user.create({
+            data: {
+              email: row.email,
+              passwordHash,
+              firstName: row.firstName,
+              lastName: row.lastName,
+              gender: row.gender || null,
+              role: 'STUDENT',
+              phone: row.phone || null,
+              address: row.address || null,
+              status: 'ACTIVE',
+            },
+          });
+          successCount++;
+        } catch (e) {
+          errors.push({ row, error: e.message });
+        }
+      }
+      fs.unlinkSync(filePath);
+      res.json({ successCount, errorCount: errors.length, errors });
+    })
+    .on('error', (err) => {
+      fs.unlinkSync(filePath);
+      res.status(500).json({ error: err.message });
+    });
+};
 // Change password for logged-in user
 export const changePassword = async (req: Request, res: Response) => {
   const userId = (req as any).user?.id; // user from JWT middleware
@@ -22,8 +78,8 @@ const prisma = new PrismaClient();
 export const listUsers = async (req: Request, res: Response) => {
   const { role, status, search, page = 1, limit = 20 } = req.query;
   const where: any = {};
-  if (role) where.role = role;
-  if (status) where.status = status;
+  if (role) where.role = String(role).toUpperCase();
+  if (status) where.status = String(status).toUpperCase();
   if (search) {
     where.OR = [
       { firstName: { contains: search, mode: 'insensitive' } },

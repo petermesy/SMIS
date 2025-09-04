@@ -48,11 +48,11 @@ export const UserManagement = () => {
       }
     };
     fetchUsers();
-  }, []);
+  }, [filterRole]);
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = `${user.firstName} ${user.lastName} ${user.email}`.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = filterRole === 'all' || user.role === filterRole;
+    const matchesRole = filterRole === 'all' || user.role.toLowerCase() === filterRole.toLowerCase();
     return matchesSearch && matchesRole;
   });
 
@@ -116,17 +116,23 @@ export const UserManagement = () => {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-          <p className="text-gray-600">Manage users, roles, and permissions</p>
+      {/* Header and Bulk Import Dialog */}
+      <div>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+            <p className="text-gray-600">Manage users, roles, and permissions</p>
+          </div>
+          <div className="flex space-x-2">
+            <Button onClick={handleCreateUser} className="flex items-center space-x-2">
+              <UserPlus className="w-4 h-4" />
+              <span>Add User</span>
+            </Button>
+          </div>
         </div>
-        <Button onClick={handleCreateUser} className="flex items-center space-x-2">
-          <UserPlus className="w-4 h-4" />
-          <span>Add User</span>
-        </Button>
       </div>
 
+      {/* User Table */}
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
@@ -229,6 +235,8 @@ export const UserManagement = () => {
     </div>
   );
 };
+
+export default UserManagement;
 
 interface UserDialogProps {
   isOpen: boolean;

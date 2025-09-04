@@ -1,5 +1,6 @@
 
 import { Router, RequestHandler } from 'express';
+import multer from 'multer';
 import { authenticateJWT, requireRole, AuthRequest } from '../middlewares/auth';
 import { body, validationResult } from 'express-validator';
 import {
@@ -12,6 +13,16 @@ import {
 } from '../controllers/userController';
 
 const router = Router();
+const upload = multer({ dest: 'uploads/' });
+
+// POST /api/users/import-students - Bulk import students via CSV
+router.post(
+  '/import-students',
+  authenticateJWT,
+  requireRole('ADMIN'),
+  upload.single('file'),
+  require('../controllers/userController').importStudents as RequestHandler
+);
 
 // POST /api/users/change-password - Change password for logged-in user
 router.post(
