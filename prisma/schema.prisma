@@ -88,9 +88,20 @@ model Semester {
   isCurrent      Boolean  @default(false)
   attendanceSummaries AttendanceSummary[]
   gradeReports   GradeReport[]
-
   gradeEntries GradeEntry[]
   studentEnrollments StudentEnrollment[]
+  registrationOpen Boolean @default(false) // Admin can open/close registration for this semester
+  minAverage        Float?   // Minimum average grade required to register
+  noFailedSubjects  Boolean? // If true, student must have no failed subjects
+}
+
+model ClassSection {
+  id        String   @id @default(uuid())
+  name      String   // e.g., "A", "B", "C"
+  grade     Int      // e.g., 9, 10, 11, 12
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  // Add relations if needed
 }
 
 model Grade {

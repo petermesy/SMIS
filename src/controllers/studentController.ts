@@ -1,0 +1,87 @@
+import { Request, Response, NextFunction } from 'express';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+// Helper: Calculate average and check for failed subjects
+async function getStudentSemesterStats(studentId: string, semesterId: string) {
+  const grades = await prisma.gradeEntry.findMany({
+    where: { studentId, semesterId },
+    select: { pointsEarned: true, totalPoints: true },
+  });
+  if (grades.length === 0) return { avg: 0, hasFailed: true };
+  const totalEarned = grades.reduce((sum, g) => sum + (g.pointsEarned || 0), 0);
+  const totalPossible = grades.reduce((sum, g) => sum + (g.totalPoints || 0), 0);
+  const avg = totalPossible > 0 ? (totalEarned / totalPossible) * 100 : 0;
+  const hasFailed = grades.some(g => (g.pointsEarned || 0) < (g.totalPoints || 0) * 0.5);
+  return { avg, hasFailed };
+}
+
+// POST /students/:id/register-next-semester
+export const registerNextSemester = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const studentId = req.params.id;
+    const { currentSemesterId } = req.body;
+    if (!currentSemesterId) {
+      return res.status(400).json({ error: 'Current semester ID required' });
+    }
+
+    // 1. Find current and next semester
+    const currentSemester = await prisma.semester.findUnique({ where: { id: currentSemesterId } });
+    if (!currentSemester) return res.status(404).json({ error: 'Current semester not found' });
+
+    const nextSemester = await prisma.semester.findFirst({
+      where: {
+        academicYearId: currentSemester.academicYearId,
+        startDate: { gt: currentSemester.startDate }
+      },
+      orderBy: { startDate: 'asc' },
+    });
+    if (!nextSemester) return res.status(404).json({ error: 'No next semester found' });
+
+    // 2. Check if registration is open
+    if (!nextSemester.registrationOpen) {
+      return res.status(403).json({ error: 'Registration is not open for the next semester' });
+    }
+
+    // 3. Get requirements from next semester
+    const { minAverage, noFailedSubjects } = nextSemester;
+
+    // 4. Get student stats for current semester
+    const { avg, hasFailed } = await getStudentSemesterStats(studentId, currentSemesterId);
+
+    // 5. Check requirements
+    if (typeof minAverage === 'number' && avg < minAverage) {
+      return res.status(403).json({ error: `Minimum average required: ${minAverage}` });
+    }
+    if (noFailedSubjects && hasFailed) {
+      return res.status(403).json({ error: 'You have failed subjects and cannot register.' });
+    }
+
+    // 6. Get latest enrollment for classId and academicYearId
+    const latestEnrollment = await prisma.studentEnrollment.findFirst({
+      where: {
+        studentId,
+        semesterId: currentSemesterId,
+      },
+      orderBy: { enrollmentDate: 'desc' },
+    });
+    if (!latestEnrollment) {
+      return res.status(404).json({ error: 'No current enrollment found for student' });
+    }
+
+    // 7. Enroll student in next semester
+    const enrollment = await prisma.studentEnrollment.create({
+      data: {
+        studentId,
+        semesterId: nextSemester.id,
+        classId: latestEnrollment.classId,
+        academicYearId: latestEnrollment.academicYearId,
+      },
+    });
+    res.status(201).json({ message:'Registered for next semester', enrollment });
+  } catch (err) {
+    console.error('Error in registerNextSemester:', err);
+    next(err);
+  }
+};

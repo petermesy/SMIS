@@ -16,6 +16,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use(helmet());
 app.use(morgan('dev'));
+
 app.use(
   rateLimit({
     windowMs: config.rateLimitWindow * 60 * 1000,
@@ -40,6 +41,12 @@ const swaggerOptions = {
   },
   apis: ['./src/routes/*.ts', './src/models/*.ts'],
 };
+
+app.use(cors({
+  origin: ['http://localhost:8080', 'http://localhost:4000'],
+  credentials: true // if you use cookies/auth
+}));
+
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 

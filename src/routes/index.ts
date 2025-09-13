@@ -13,6 +13,8 @@ import parentRoutes from './parents';
 import subjectRoutes from './subjects';
 import examRoutes from './exams';
 import teacherAssignmentsRoutes from './teacherAssignments';
+import studentRoutes from './students';
+import classSectionRoutes from './classSections';
 
 const router = Router();
 
@@ -31,6 +33,9 @@ router.use('/parents', parentRoutes);
 router.use('/subjects', subjectRoutes);
 router.use('/exams', examRoutes);
 router.use('/teacher-assignments', teacherAssignmentsRoutes);
+router.use('/students', studentRoutes);
+router.use('/class-sections', classSectionRoutes);
+
 // ... add other route modules here
 
 export default router;

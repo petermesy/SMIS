@@ -1,26 +1,49 @@
+
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-export const listSemesters = async (req: Request, res: Response) => {
-  const semesters = await prisma.semester.findMany({ orderBy: { startDate: 'desc' } });
-  res.json(semesters);
+// PATCH /api/semesters/:id/registration
+export const updateRegistrationOpen = async (req, res) => {
+  const { id } = req.params;
+  const { registrationOpen, minAverage, noFailedSubjects } = req.body;
+  const semester = await prisma.semester.update({
+    where: { id },
+    data: {
+      registrationOpen,
+      minAverage,
+      noFailedSubjects,
+    },
+  });
+  res.json(semester);
+};
+
+export const listSemesters = async (req, res) => {
+  try {
+    const semesters = await prisma.semester.findMany();
+    res.json(semesters);
+  } catch (err) {
+    console.error('Failed to load semesters:', err);
+    res.status(500).json({ error: 'Failed to load semesters' });
+  }
 };
 
 export const createSemester = async (req: Request, res: Response) => {
-  const { name, academicYearId, startDate, endDate, isCurrent } = req.body;
+  const { name, academicYearId, startDate, endDate, isCurrent, registrationOpen } = req.body;
   if (!name || !academicYearId || !startDate || !endDate) {
     return res.status(400).json({ error: 'Missing required fields' });
   }
-  const semester = await prisma.semester.create({
+  await prisma.semester.create({
     data: {
       name,
       academicYearId,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       isCurrent: !!isCurrent,
+      registrationOpen: !!registrationOpen,
     },
   });
-  res.status(201).json(semester);
+  return res.status(201).json({ success: true });
+  return;
 };

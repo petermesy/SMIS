@@ -1,4 +1,6 @@
 import { useAuth } from "@/contexts/AuthContext";
+import AdminSemesters from "@/pages/AdminSemesters";
+import { AddClassSection } from '@/components/AddClassSection';
 
 // Helper component for /classes route to check user role
 function ClassesRouteContent() {
@@ -8,6 +10,7 @@ function ClassesRouteContent() {
   }
   return <ComingSoon title="My Classes" description="View and manage your assigned classes." />;
 }
+
 
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -138,6 +141,16 @@ function AppRoutes() {
       <Route path="/documents" element={
         <ProtectedRoute>
           <DocumentManagement />
+        </ProtectedRoute>
+      } />
+       <Route path="/admin/semesters" element={
+        <ProtectedRoute>
+          <AdminSemesters />
+        </ProtectedRoute>
+      } />
+       <Route path="/admin/class-sections" element={
+        <ProtectedRoute>
+       <AddClassSection />
         </ProtectedRoute>
       } />
       <Route path="/settings" element={

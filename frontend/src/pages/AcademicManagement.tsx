@@ -1,6 +1,8 @@
+import { RegistrationControl } from '@/components/RegistrationControl';
+import { AddClassSection } from '@/components/AddClassSection';
 // Helper to print a single student report (detailed, with subject scores, academic year, and semester, and 11 columns)
 const handlePrintStudentReport = (student, grade, section, className, allSubjects, rankedStudents) => {
-  const schoolName = "Sawla International School";
+  const schoolName = "SSPS";
   let academicYear = student.academicYear || '';
   let semester = student.semester || '';
   if (!academicYear || !semester) {
@@ -124,7 +126,7 @@ function getLetterGrade(percentage: number): string {
 
 // Helper to save all student reports as PDFs (one PDF per student)
 const handleBatchSaveStudentReportsAsPDF = async (students, grade, section, className, allSubjects, rankedStudents) => {
-  const schoolName = "Sawla International School";
+  const schoolName = "SSPS";
   for (const student of students) {
     const studentRanked = rankedStudents.find(s => s.id === student.id);
     let subjectRows = '';
@@ -423,7 +425,7 @@ export const AcademicManagement = () => {
   };
   // Helper to print all student reports for a section in one window, each on a new page
   const handleBatchPrintStudentReports = (students, grade, section, className, allSubjects, rankedStudents) => {
-    const schoolName = "Sawla International School";
+    const schoolName = "SSPS";
     let content = '';
     students.forEach(student => {
       const studentRanked = rankedStudents.find(s => s.id === student.id);
@@ -884,7 +886,7 @@ export const AcademicManagement = () => {
   // Updated: Print each student's detailed report individually (one per page, in a single print job)
   function printDetailedTable(rankedStudents: any[], allSubjects: string[], grade: string, section: string, className: string) {
     // Reuse the same layout as handlePrintStudentReport, but for all students, each on a new page
-    const schoolName = "Sawla International School";
+    const schoolName = "SSPS";
     let content = '';
     rankedStudents.forEach(student => {
       // Calculate percentile for this student
@@ -1584,3 +1586,10 @@ const AcademicDialog = ({ isOpen, onClose, type, item, onSave, isEditing, subjec
     </Dialog>
   );
 };
+{/* <TabsContent value="academic-years" className="space-y-4">
+  <AcademicYearManagement />
+  {/* Registration controls for open semesters */}
+  // {semesters.filter(sem => sem.registrationOpen).map(sem => (
+  //   <RegistrationControl key={sem.id} semester={sem} />
+  // ))}
+// </TabsContent> */}

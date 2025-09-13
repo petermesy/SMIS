@@ -1,11 +1,9 @@
-
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { getGrades, getSubjects, getGradeCategories } from '@/lib/api';
+import { getGrades, getSubjects, getGradeCategories, registerNextSemester } from '@/lib/api';
 import { fetchSemesterMap } from '@/lib/student-utils';
 import { fetchAcademicYearMap } from '@/lib/academic-utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-
 
 export default function StudentGrades() {
   const { user } = useAuth();
@@ -18,6 +16,23 @@ export default function StudentGrades() {
   const [selectedSemester, setSelectedSemester] = useState<string>('');
   const [selectedAcademicYear, setSelectedAcademicYear] = useState<string>('');
 
+  // Registration state
+  const [registering, setRegistering] = useState(false);
+  const [registerMessage, setRegisterMessage] = useState('');
+  // For demo: always eligible. You can add real eligibility logic here.
+  const eligibleForNext = true;
+
+  const handleRegisterNext = async () => {
+    setRegistering(true);
+    setRegisterMessage('');
+    try {
+await registerNextSemester(selectedSemester);
+      setRegisterMessage('Successfully registered for next semester/year!');
+    } catch (err) {
+      setRegisterMessage('Registration failed.');
+    }
+    setRegistering(false);
+  };
 
   // Fetch academic years and semesters on mount
   useEffect(() => {
@@ -110,9 +125,7 @@ export default function StudentGrades() {
                 const subject = subjects.find((s: any) => s.id === grade.subjectId);
                 const category = categories.find((c: any) => c.id === grade.categoryId);
                 const semesterName = grade.semester?.name || semesterMap[grade.semesterId] || grade.semesterId;
-                // Academic year: prefer grade.class.academicYear.name, then map, then id
                 const academicYearName = grade.class?.academicYear?.name || academicYearMap[grade.class?.academicYearId] || grade.class?.academicYearId || '';
-                // Show exam type name if available
                 const examTypeName = category ? category.name : (grade.category?.name || grade.categoryId);
                 return (
                   <tr key={grade.id}>
@@ -170,6 +183,21 @@ export default function StudentGrades() {
           </div>
         </CardContent>
       </Card>
+      {/* Registration Button */}
+      {user?.role === 'student' && eligibleForNext && (
+        <div className="mt-6 flex flex-col items-center">
+          <button
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+            onClick={handleRegisterNext}
+            disabled={registering}
+          >
+            {registering ? 'Registering...' : 'Register for Next Semester/Year'}
+          </button>
+          {registerMessage && (
+            <div className="mt-2 text-green-700 font-semibold">{registerMessage}</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

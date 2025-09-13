@@ -339,11 +339,29 @@ export async function createAcademicYear(data: any) {
   return res.data;
 }
 // Semesters
+
+export async function createSemester(data: any) {
+  const res = await api.post('/semesters', data);
+  return res.data;
+}
 export async function getSemesters() {
   const res = await api.get('/semesters');
   return res.data;
 }
-export async function createSemester(data: any) {
-  const res = await api.post('/semesters', data);
+export async function registerNextSemester(currentSemesterId: string) {
+  const res = await api.post('/students/register-next', { currentSemesterId });
   return res.data;
+}
+
+
+// Admin: Open/Close registration for a semester
+export async function setSemesterRegistrationOpen(semesterId: string, open: boolean) {
+  const res = await api.patch(`/semesters/${semesterId}/registration`, { registrationOpen: open });
+  return res.data;
+}
+
+// Student: Check if registration is open for next semester
+export async function getNextSemesterRegistrationStatus(studentId: string, currentSemesterId: string) {
+  const res = await api.get(`/students/${studentId}/next-semester-registration-status`, { params: { currentSemesterId } });
+  return res.data; // { registrationOpen: boolean, eligible: boolean, nextSemesterId: string }
 }

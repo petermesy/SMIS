@@ -27,6 +27,8 @@ const navigationItems = {
     { name: 'Class Scheduling', href: '/schedule', icon: Calendar },
     { name: 'Attendance', href: '/attendance', icon: ClipboardList },
     { name: 'Academic Management', href: '/academics', icon: BookOpen },
+    { name: 'Manage Semesters', href: '/admin/semesters', icon: Calendar },
+    { name: 'Add Section', href: '/admin/class-sections', icon: Calendar },
     { name: 'Communications', href: '/communications', icon: MessageCircle },
     { name: 'Documents', href: '/documents', icon: FileText },
     { name: 'Settings', href: '/settings', icon: Settings },
@@ -77,7 +79,7 @@ export const Sidebar = () => {
             <div className="flex items-center space-x-2">
               <img src="/logo.png" alt="School Logo" className="w-8 h-8 rounded-full object-cover" />
               <div className="text-sm">
-                <p className="font-semibold text-gray-900 dark:text-gray-100">Mahtot Primary School</p>
+                <p className="font-semibold text-gray-900 dark:text-gray-100">SSPS</p>
                 <p className="text-gray-600 dark:text-gray-400">SMIS</p>
               </div>
             </div>
