@@ -1,19 +1,21 @@
 import { useState } from 'react';
-import axios from 'axios';
+import { api } from '@/lib/api';
 
 export const AddClassSection = () => {
   const [name, setName] = useState('');
   const [grade, setGrade] = useState('');
   const [message, setMessage] = useState('');
+  const [academicYearId, setAcademicYearId] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('');
     try {
-      await axios.post('/api/class-sections', { name, grade: Number(grade) });
+      await api.post('/class-sections', { name, grade: Number(grade),academicYearId });
       setMessage('Class section added!');
       setName('');
       setGrade('');
+      setAcademicYearId('');
     } catch (err) {
       setMessage('Failed to add class section.');
     }
@@ -22,11 +24,11 @@ export const AddClassSection = () => {
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
       <div>
-        <label>Section Name: </label>
+        <label>Section Name (e.g. A, B, C): </label>
         <input value={name} onChange={e => setName(e.target.value)} required />
       </div>
       <div>
-        <label>Grade: </label>
+        <label>Grade (e.g. 9, 10, 11, 12): </label>
         <input type="number" value={grade} onChange={e => setGrade(e.target.value)} required min={1} />
       </div>
       <button type="submit">Add Class Section</button>

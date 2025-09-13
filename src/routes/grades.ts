@@ -11,6 +11,7 @@ import {
   getClassGrades,
   deleteGrade,
 } from '../controllers/gradeController';
+import { listGrades } from '../controllers/gradeController';
 
 const router = Router();
 
@@ -56,6 +57,8 @@ router.get('/levels-with-sections', authenticateJWT as RequestHandler, getGradeL
 
 // POST /api/grades
 import { addGradeEntry } from '../controllers/gradeController';
+router.get('/', listGrades);
+
 router.post(
   '/',
   [

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import axios from 'axios';
+import { api } from '@/lib/api';
 
 export const RegistrationControl = ({ semester }) => {
   const [registrationOpen, setRegistrationOpen] = useState(semester.registrationOpen);
@@ -12,7 +12,7 @@ export const RegistrationControl = ({ semester }) => {
     setSaving(true);
     setMessage('');
     try {
-      await axios.patch(`/api/semesters/${semester.id}/registration`, {
+      await api.patch(`/api/semesters/${semester.id}/registration`, {
         registrationOpen,
         minAverage: minAverage === '' ? null : Number(minAverage),
         noFailedSubjects,

@@ -90,7 +90,7 @@ async function main() {
   // });
 
   // Grades 1-8 with section 'A'
-  for (let level = 1; level <= 8; level++) {
+  for (let level = 9; level <= 12; level++) {
     // Check if grade already exists
     const existing = await prisma.grade.findFirst({ where: { level } });
     if (!existing) {
@@ -98,11 +98,11 @@ async function main() {
         data: {
           name: `Grade ${level}`,
           level,
-          sections: {
+          classSections: {
             create: [{ name: 'A' }],
           },
         },
-        include: { sections: true },
+        include: { classSections: true },
       });
       console.log(`Seeded Grade ${level} with section A`);
     } else {

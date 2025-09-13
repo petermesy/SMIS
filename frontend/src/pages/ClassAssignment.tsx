@@ -85,10 +85,14 @@ export default function ClassAssignment() {
         </CardHeader>
         <CardContent className="space-y-4">
           <Select value={selectedClass} onValueChange={setSelectedClass}>
-            <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Select Class" />
+            </SelectTrigger>
             <SelectContent>
               {classes.map(cls => (
-                <SelectItem key={cls.id} value={cls.id}>{cls.grade?.name} {cls.section?.name}</SelectItem>
+                <SelectItem key={cls.id} value={cls.id}>
+                  {cls.grade?.name} {cls.classSection?.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -132,14 +136,18 @@ export default function ClassAssignment() {
           <CardTitle>Assign Student to Class</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Select value={selectedClass} onValueChange={setSelectedClass}>
-            <SelectTrigger><SelectValue placeholder="Select Class" /></SelectTrigger>
-            <SelectContent>
-              {classes.map(cls => (
-                <SelectItem key={cls.id} value={cls.id}>{cls.grade?.name} {cls.section?.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+                <Select value={selectedClass} onValueChange={setSelectedClass}>
+        <SelectTrigger>
+          <SelectValue placeholder="Select Class" />
+        </SelectTrigger>
+        <SelectContent>
+          {classes.map(cls => (
+            <SelectItem key={cls.id} value={cls.id}>
+              {cls.grade?.name} {cls.classSection?.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
           <Select value={selectedStudent} onValueChange={setSelectedStudent}>
             <SelectTrigger><SelectValue placeholder="Select Student" /></SelectTrigger>
             <SelectContent>

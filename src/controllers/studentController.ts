@@ -17,6 +17,28 @@ async function getStudentSemesterStats(studentId: string, semesterId: string) {
   return { avg, hasFailed };
 }
 
+
+export const enrollStudentInClass = async (req: Request, res: Response) => {
+  try {
+    const { studentId, classId, academicYearId, semesterId } = req.body;
+    if (!studentId || !classId || !academicYearId) {
+      return res.status(400).json({ error: 'studentId, classId, and academicYearId are required.' });
+    }
+    const enrollment = await prisma.studentEnrollment.create({
+      data: {
+        studentId,
+        classId,
+        academicYearId,
+        semesterId: semesterId || null,
+      },
+    });
+    res.status(201).json({ enrollment });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to enroll student in class.' });
+    console.error(err);
+  }
+};
+
 // POST /students/:id/register-next-semester
 export const registerNextSemester = async (req: Request, res: Response, next: NextFunction) => {
   try {
