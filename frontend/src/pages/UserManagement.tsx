@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, UserPlus, Edit, Trash2, Search, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 import { getUsers, createUser, updateUser, deleteUser } from '@/lib/api';
-
+import { BulkUserUpload } from "@/components/admin/BulkUserUpload";
 interface UserData {
   id: string;
   firstName: string;
@@ -27,6 +27,8 @@ interface UserData {
   classId?: string;
   parentId?: string;
 }
+
+
 
 export const UserManagement = () => {
   const { user } = useAuth();
@@ -123,9 +125,13 @@ export const UserManagement = () => {
             <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
             <p className="text-gray-600">Manage users, roles, and permissions</p>
           </div>
+
           <div className="flex space-x-2">
+                  <BulkUserUpload />
+
             <Button onClick={handleCreateUser} className="flex items-center space-x-2">
               <UserPlus className="w-4 h-4" />
+              
               <span>Add User</span>
             </Button>
           </div>

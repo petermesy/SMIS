@@ -1,5 +1,12 @@
 import fs from 'fs';
 import { parse } from 'csv-parse';
+import { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+
+
+
+
 // Bulk import students from CSV
 export const importStudents = async (req: Request, res: Response) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
@@ -25,9 +32,12 @@ export const importStudents = async (req: Request, res: Response) => {
           if (existing) {
             errors.push({ row, error: 'Email already exists' });
             continue;
-          }
+             }
+          // Accept role from CSV, default to STUDENT, only allow STUDENT or TEACHER
+          let role = (row.role || 'STUDENT').toUpperCase();
+          if (role !== 'STUDENT' && role !== 'TEACHER') role = 'STUDENT';
           // Default password: lastName+123 (should be changed by user)
-          const passwordHash = await bcrypt.hash((row.lastName || 'student') + '123', 10);
+          const passwordHash = await bcrypt.hash((row.lastName || 'user') + '123', 10);
           await prisma.user.create({
             data: {
               email: row.email,
@@ -35,18 +45,18 @@ export const importStudents = async (req: Request, res: Response) => {
               firstName: row.firstName,
               lastName: row.lastName,
               gender: row.gender || null,
-              role: 'STUDENT',
+              role,
               phone: row.phone || null,
               address: row.address || null,
               status: 'ACTIVE',
             },
           });
           successCount++;
-        } catch (e) {
+        } catch (e: any) {
           errors.push({ row, error: e.message });
         }
       }
-      fs.unlinkSync(filePath);
+       fs.unlinkSync(filePath);
       res.json({ successCount, errorCount: errors.length, errors });
     })
     .on('error', (err) => {
