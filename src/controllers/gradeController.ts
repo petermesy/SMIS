@@ -16,17 +16,8 @@ export const getGradeCategories = async (req: Request, res: Response, next: Next
   } catch (err) {
     next(err);
   }
-}
-
-// List all grades from the Grade table
-export const listGrades = async (req, res) => {
-  try {
-    const grades = await prisma.grade.findMany();
-    res.json(grades);
-  } catch (e) {
-    res.status(500).json({ error: 'Failed to fetch grades' });
-  }
 };
+
 
 export const createGradeCategory = async (req: Request, res: Response, next: NextFunction) => {
   try {

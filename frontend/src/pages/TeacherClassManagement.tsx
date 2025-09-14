@@ -765,13 +765,13 @@ const handleDeleteGrade = async () => {
               <SelectTrigger className="w-full sm:w-48">
                 <SelectValue placeholder={loading.assignments ? 'Loading...' : 'Select Class & Subject'} />
               </SelectTrigger>
-              <SelectContent>
-                {assignments.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.class.grade.name} {a.class.section.name} - {a.subject.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+            <SelectContent>
+              {assignments.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {(a.class?.grade?.name || 'No Grade')} {a.class?.classSection?.name || 'No Section'} - {(a.subject?.name || 'No Subject')}
+                </SelectItem>
+              ))}
+            </SelectContent>
             </Select>
           </div>
         </CardContent>

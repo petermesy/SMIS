@@ -196,7 +196,7 @@ export async function getSubjects() {
   const res = await api.get('/subjects');
   return res.data;
 }
-export async function createSubject(data: any) {
+export async function createSubject(data: { name: string; code: string; description?: string; gradeId: string }) {
   const res = await api.post('/subjects', data);
   return res.data;
 }

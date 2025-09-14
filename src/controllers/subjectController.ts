@@ -13,16 +13,16 @@ export const listSubjects = async (req: Request, res: Response) => {
 };
 
 export const createSubject = async (req: Request, res: Response) => {
-  const { name, code, gradeId, description } = req.body;
-  if (!name || !code || !gradeId) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
   try {
+    const { name, code, description, gradeId } = req.body;
+    if (!name || !code || !gradeId) {
+      return res.status(400).json({ error: 'name, code, and gradeId are required' });
+    }
     const subject = await prisma.subject.create({
-      data: { name, code, gradeId, description },
+      data: { name, code, description, gradeId }
     });
     res.status(201).json(subject);
-  } catch (e) {
+  } catch (err) {
     res.status(500).json({ error: 'Failed to create subject' });
   }
 };

@@ -1,5 +1,6 @@
 import { RegistrationControl } from '@/components/RegistrationControl';
 import { AddClassSection } from '@/components/AddClassSection';
+import { SubjectManagement } from '@/pages/SubjectManagement';
 // Helper to print a single student report (detailed, with subject scores, academic year, and semester, and 11 columns)
 const handlePrintStudentReport = (student, grade, section, className, allSubjects, rankedStudents) => {
   const schoolName = "SSPS";
@@ -1094,56 +1095,8 @@ export const AcademicManagement = () => {
           <TabsTrigger value="exams">Examinations</TabsTrigger>
           <TabsTrigger value="academic-years">Academic Years</TabsTrigger>
         </TabsList> 
-
         <TabsContent value="subjects" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Subject Management</h2>
-            <Button onClick={() => handleCreate('subject')}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Subject
-            </Button>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {subjects.map((subject) => (
-              <Card key={subject.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <BookOpen className="w-5 h-5" />
-                      <span>{subject.name}</span>
-                    </div>
-                    <Badge>{subject.code}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <p><strong>Grade:</strong> {subject.grade ? subject.grade.replace('-', ' ').toUpperCase() : 'N/A'}</p>
-                    <p><strong>Credits:</strong> {subject.credits}</p>
-                    <p><strong>Teacher:</strong> {subject.teacher}</p>
-                    <p className="text-sm text-gray-600">{subject.description}</p>
-                    <div className="flex space-x-2 mt-4">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit('subject', subject)}
-                      >
-                        <Edit className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete('subject', subject.id)}
-                        className="text-red-600"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <SubjectManagement />
         </TabsContent>
 
         <TabsContent value="grades" className="space-y-4">

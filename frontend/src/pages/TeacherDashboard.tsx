@@ -212,13 +212,13 @@ export default function TeacherDashboard() {
             </Select>
             <Select value={selectedAssignment} onValueChange={setSelectedAssignment}>
               <SelectTrigger><SelectValue placeholder="Select Class & Subject" /></SelectTrigger>
-              <SelectContent>
-                {assignments.map(a => (
-                  <SelectItem key={a.id} value={a.id}>
-                    {a.class.grade.name} {a.class.section.name} - {a.subject.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+            <SelectContent>
+              {assignments.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {(a.class?.grade?.name || 'No Grade')} {(a.class?.section?.name || 'No Section')} - {(a.subject?.name || 'No Subject')}
+                </SelectItem>
+              ))}
+            </SelectContent>
             </Select>
             <Select value={selectedCategory} onValueChange={setSelectedCategory} disabled={!categories.length}>
               <SelectTrigger><SelectValue placeholder="Select Exam Type" /></SelectTrigger>

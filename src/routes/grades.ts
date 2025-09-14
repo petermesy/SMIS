@@ -1,5 +1,4 @@
 import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
-const { body, param, validationResult } = require('express-validator');
 import { authenticateJWT, AuthRequest } from '../middlewares/auth';
 import {
   getGradeCategories,
@@ -10,14 +9,17 @@ import {
   listAllGrades,
   getClassGrades,
   deleteGrade,
+  addGradeEntry,
+  getGradeLevelsWithSections
 } from '../controllers/gradeController';
-import { listGrades } from '../controllers/gradeController';
+import type { RequestHandler } from 'express';
+
+const { body, param, validationResult } = require('express-validator');
 
 const router = Router();
 
 // GET /api/grades/statistics
 router.get('/statistics', authenticateJWT as RequestHandler, getGradeStatistics as RequestHandler);
-
 
 // GET /api/grades/categories/:subjectId
 router.get('/categories/:subjectId', authenticateJWT as RequestHandler, getGradeCategories as RequestHandler);
@@ -39,9 +41,7 @@ router.post(
 // GET /api/grades/:studentId/:subjectId
 router.get('/:studentId/:subjectId', authenticateJWT as RequestHandler, getStudentGrades as RequestHandler);
 
-
 // Middleware to require teacher role
-import type { RequestHandler } from 'express';
 const requireTeacher: RequestHandler = (req, res, next) => {
   if ((req as any).user?.role !== 'teacher') {
     return res.status(403).json({ error: 'Forbidden' });
@@ -51,14 +51,11 @@ const requireTeacher: RequestHandler = (req, res, next) => {
 
 // GET /api/grades/class (for teacher: all grades for class/subject/category/semester)
 router.get('/class/all', authenticateJWT as RequestHandler, requireTeacher, getClassGrades as RequestHandler);
+
 // GET /api/grades/levels-with-sections
-import { getGradeLevelsWithSections } from '../controllers/gradeController';
 router.get('/levels-with-sections', authenticateJWT as RequestHandler, getGradeLevelsWithSections as RequestHandler);
 
 // POST /api/grades
-import { addGradeEntry } from '../controllers/gradeController';
-router.get('/', listGrades);
-
 router.post(
   '/',
   [
@@ -101,10 +98,7 @@ router.delete(
   ]
 );
 
-
-
-// Middleware to require teacher role
-// GET /api/grades
+// GET /api/grades (list all grades)
 router.get('/', authenticateJWT as RequestHandler, listAllGrades as RequestHandler);
 
 // Validation error handler middleware
@@ -115,7 +109,6 @@ function validationErrorHandler(req: Request, res: Response, next: NextFunction)
   }
   next();
 }
-
 
 // GET /api/grades/reports/:studentId/:semesterId
 // TODO: Implement getGradeReport in gradeController and add here if needed.
