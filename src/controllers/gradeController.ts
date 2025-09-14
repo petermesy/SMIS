@@ -598,10 +598,24 @@ export const getGradeStatistics = async (req: Request, res: Response, next: Next
   }
 };
 
+export const listGrades = async (req: Request, res: Response) => {
+  try {
+    const grades = await prisma.grade.findMany();
+    res.json(grades);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch grades' });
+  }
+};
 
 export const listAllGrades = async (req: Request, res: Response) => {
   try {
+    const { academicYearId } = req.query;
+    const where: any = {};
+    if (academicYearId && academicYearId !== "ALL") {
+      where.class = { academicYearId: academicYearId };
+    }
     const grades = await prisma.gradeEntry.findMany({
+      where,
       include: {
         student: true,
         subject: true,

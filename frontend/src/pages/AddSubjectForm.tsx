@@ -5,7 +5,7 @@ import { Input } from "../components/ui/input";
 import { Button } from "../components/ui/button";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "../components/ui/select";
 import { createSubject } from "../lib/api";
-
+import { api } from "../lib/api";
 interface AddSubjectFormProps {
   grades: { id: string; name: string }[];
   onSuccess?: () => void;

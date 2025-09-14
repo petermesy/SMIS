@@ -4,9 +4,9 @@ export async function changePassword(oldPassword: string, newPassword: string) {
   return res.data;
 }
 // Get all grade entries (student scores, not grade levels)
-export async function getGrades() {
+export async function getGrades(params?: any) {
   try {
-    const res = await api.get('/grades');
+    const res = await api.get('/grades', { params });
     return res.data;
   } catch (err: any) {
     console.error('getGrades error:', err.response?.data || err.message);

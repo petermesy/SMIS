@@ -4,6 +4,7 @@ import { getGrades, getSubjects, getGradeCategories, registerNextSemester } from
 import { fetchSemesterMap } from '@/lib/student-utils';
 import { fetchAcademicYearMap } from '@/lib/academic-utils';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { api } from "../lib/api"; // adjust import if needed
 
 export default function StudentGrades() {
   const { user } = useAuth();
@@ -21,7 +22,25 @@ export default function StudentGrades() {
   const [registerMessage, setRegisterMessage] = useState('');
   // For demo: always eligible. You can add real eligibility logic here.
   const eligibleForNext = true;
+  const [eligible, setEligible] = useState(false);
+  const [eligibilityChecked, setEligibilityChecked] = useState(false);
 
+  
+
+
+    useEffect(() => {
+    // Fetch eligibility for registration
+    const checkEligibility = async () => {
+      try {
+        const res = await api.get('/students/registration-eligibility');
+        setEligible(res.data.eligible);
+      } catch {
+        setEligible(false);
+      }
+      setEligibilityChecked(true);
+    };
+    checkEligibility();
+  }, []);
   const handleRegisterNext = async () => {
     setRegistering(true);
     setRegisterMessage('');
@@ -186,13 +205,16 @@ await registerNextSemester(selectedSemester);
       {/* Registration Button */}
       {user?.role === 'student' && eligibleForNext && (
         <div className="mt-6 flex flex-col items-center">
+                {eligibilityChecked && eligible && (
+
           <button
             className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
             onClick={handleRegisterNext}
             disabled={registering}
           >
             {registering ? 'Registering...' : 'Register for Next Semester/Year'}
-          </button>
+          </button>      )}
+
           {registerMessage && (
             <div className="mt-2 text-green-700 font-semibold">{registerMessage}</div>
           )}

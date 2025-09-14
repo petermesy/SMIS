@@ -561,8 +561,15 @@ export const AcademicManagement = () => {
     // Helper: get all grades for a student, filtered by academic year and semester if selected
     const getStudentGrades = (studentId: string) => {
       return grades.filter(g => {
-        if (g.studentId !== studentId) return false;
-        if (selectedAcademicYear && g.academicYear !== selectedAcademicYear) return false;
+     if (g.studentId !== studentId) return false;
+    if (selectedAcademicYear && g.academicYear !== selectedAcademicYear) {
+      console.log('Filtered out by academicYear:', {
+        gradeId: g.id,
+        gAcademicYear: g.academicYear,
+        selectedAcademicYear
+      });
+      return false;
+    }
         // Allow semester filter to match by ID or name for robustness
         if (selectedSemester) {
           // g.semester may be ID or name, selectedSemester is always ID
@@ -751,8 +758,11 @@ export const AcademicManagement = () => {
                           <tr key={student.id} className="border hover:bg-gray-50">
                             <td className="p-2 border">{student.firstName} {student.lastName}</td>
                             <td className="p-2 border">{student.email}</td>
+                            
                             {allSubjects.map(subject => {
                               const subj = student.subjectMap[subject];
+                              console.log(`AdminSummary: grade=${grade}, section=${section}, rankedStudents=`, rankedStudents);
+
                               return (
                                 <td key={subject} className="p-2 border">{subj ? `${subj.totalEarned} / ${subj.totalPossible}` : '-'}</td>
                               );
@@ -783,6 +793,7 @@ export const AcademicManagement = () => {
           </div>
         ))}
       </div>
+      
     );
   };
   const { user } = useAuth();
@@ -804,32 +815,41 @@ export const AcademicManagement = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+         const params: any = {};
+      if (selectedAcademicYear && selectedAcademicYear !== "ALL") {
+        params.academicYearId = selectedAcademicYear;
+      }
         const [subjects, gradesRaw, exams, classes] = await Promise.all([
           getSubjects(),
-          getGrades(),
+          getGrades(params),
           getExams(),
           getClasses(),
         ]);
         setSubjects(subjects);
         setExams(exams);
+
+              console.log('gradesRaw from backend:', gradesRaw);
+
+              
         // Map backend grades to frontend shape, always use academicYear and semester as IDs
         const grades = gradesRaw.map((g: any) => {
+
           const score = g.pointsEarned ?? g.score ?? 0;
           const maxScore = g.totalPoints ?? g.maxScore ?? 0;
           const percentage = maxScore > 0 ? (score / maxScore) * 100 : 0;
           const gradeLevel = g.class?.grade?.name || (g.className ? g.className.split(' ')[0] : undefined);
           const section = g.class?.section?.name || (g.className ? g.className.split(' ')[1] : undefined);
           // Normalize academicYear to id string for filtering
-          let academicYear = g.academicYear;
-          if (!academicYear && g.semester && g.semester.academicYear) {
-            academicYear = g.semester.academicYear;
-          }
-          let academicYearId = '';
-          if (academicYear && typeof academicYear === 'object' && academicYear.id) {
-            academicYearId = academicYear.id;
-          } else if (typeof academicYear === 'string') {
-            academicYearId = academicYear;
-          }
+         let academicYearId = '';
+  if (g.class && g.class.academicYearId) {
+    academicYearId = g.class.academicYearId;
+  } else if (g.class && g.class.academicYear && g.class.academicYear.id) {
+    academicYearId = g.class.academicYear.id;
+  } else if (g.academicYearId) {
+    academicYearId = g.academicYearId;
+  } else if (typeof g.academicYear === 'string') {
+    academicYearId = g.academicYear;
+  }
           // Normalize semester to id string for filtering
           let semesterId = '';
           if (g.semester && typeof g.semester === 'object' && g.semester.id) {
@@ -858,21 +878,32 @@ export const AcademicManagement = () => {
             academicYear: academicYearId,
           };
         });
+              console.log('Mapped grades for UI:', grades);
+
         setGrades(grades);
+        
 
         // Fetch students for each class, filtered by selected academic year and semester if set
-        const classStudentMap: any = {};
-        await Promise.all(classes.map(async (cls: any) => {
-          // Always pass academicYearId and semesterId if set
-          const params: any = {};
-          if (selectedAcademicYear) params.academicYearId = selectedAcademicYear;
-          if (selectedSemester) params.semesterId = selectedSemester;
-          const students = await getStudentsByClass(cls.id, Object.keys(params).length ? params : undefined);
-          classStudentMap[cls.id] = {
-            ...cls,
-            students,
-          };
-        }));
+      const classStudentMap: any = {};
+      await Promise.all(classes.map(async (cls: any) => {
+        // Always pass academicYearId and semesterId if set
+        const params: any = {};
+        if (selectedAcademicYear) params.academicYearId = selectedAcademicYear;
+        if (selectedSemester) params.semesterId = selectedSemester;
+        const students = await getStudentsByClass(cls.id, Object.keys(params).length ? params : undefined);
+        // Ensure section is included and has a name
+        let section = cls.section || cls.classSection || cls.classSectionId || null;
+        // If section is an object, prefer its name
+        let sectionObj = section && typeof section === 'object' ? section : null;
+        let sectionName = sectionObj && sectionObj.name ? sectionObj.name : (typeof section === 'string' ? section : undefined);
+        classStudentMap[cls.id] = {
+          ...cls,
+          students,
+          section: sectionObj ? sectionObj : (sectionName ? { name: sectionName } : undefined),
+        };
+      }));
+      console.log('classStudentMap:', classStudentMap);
+
         setClassStudentMap(classStudentMap);
       } catch (e) {
         toast.error('Failed to load academic data');

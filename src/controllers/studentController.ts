@@ -3,6 +3,56 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+export const getRegistrationEligibility = async (req: Request, res: Response) => {
+  try {
+    const studentId = (req as any).user?.id;
+    if (!studentId) return res.status(401).json({ error: 'Unauthorized' });
+
+    // Find the semester where registration is open
+    const semester = await prisma.semester.findFirst({
+      where: { registrationOpen: true },
+      orderBy: { startDate: 'desc' },
+    });
+    if (!semester) return res.json({ eligible: false, reason: 'Registration not open' });
+
+    // Get all grade entries for this student in this semester for English and Maths
+    const grades = await prisma.gradeEntry.findMany({
+      where: {
+        studentId,
+        semesterId: semester.id,
+        subject: { name: { in: ['English', 'Maths'] } },
+      },
+      include: { subject: true },
+    });
+ // Calculate average for each subject
+    const subjectAverages: Record<string, number> = {};
+    for (const subjectName of ['English', 'Maths']) {
+      const subjectGrades = grades.filter(g => g.subject.name === subjectName);
+      if (subjectGrades.length === 0) {
+        subjectAverages[subjectName] = 0;
+      } else {
+        const total = subjectGrades.reduce((sum, g) => sum + (g.pointsEarned || 0), 0);
+        const max = subjectGrades.reduce((sum, g) => sum + (g.totalPoints || 0), 0);
+        subjectAverages[subjectName] = max > 0 ? (total / max) * 100 : 0;
+      }
+    }
+
+    const eligible =
+      subjectAverages['English'] >= 50 &&
+      subjectAverages['Maths'] >= 50;
+
+    res.json({
+      eligible,
+      averages: subjectAverages,
+      semesterId: semester.id,
+    });
+  }catch (err) {
+    res.status(500).json({ error: 'Failed to check eligibility' });
+  }
+};
+
+
+
 // Helper: Calculate average and check for failed subjects
 async function getStudentSemesterStats(studentId: string, semesterId: string) {
   const grades = await prisma.gradeEntry.findMany({

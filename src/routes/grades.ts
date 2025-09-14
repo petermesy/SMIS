@@ -10,7 +10,8 @@ import {
   getClassGrades,
   deleteGrade,
   addGradeEntry,
-  getGradeLevelsWithSections
+  getGradeLevelsWithSections,
+  listGrades
 } from '../controllers/gradeController';
 import type { RequestHandler } from 'express';
 
@@ -20,7 +21,8 @@ const router = Router();
 
 // GET /api/grades/statistics
 router.get('/statistics', authenticateJWT as RequestHandler, getGradeStatistics as RequestHandler);
-
+router.get('/levels', authenticateJWT as RequestHandler, listGrades as RequestHandler);
+router.get('/', authenticateJWT as RequestHandler, listAllGrades as RequestHandler);
 // GET /api/grades/categories/:subjectId
 router.get('/categories/:subjectId', authenticateJWT as RequestHandler, getGradeCategories as RequestHandler);
 

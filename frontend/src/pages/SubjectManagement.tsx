@@ -6,6 +6,7 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Edit, Trash2, BookOpen } from "lucide-react";
 import { toast } from "sonner";
+import { api } from "../lib/api"; // adjust import if needed
 
 export const SubjectManagement: React.FC = () => {
   const [subjects, setSubjects] = useState<any[]>([]);
@@ -14,10 +15,10 @@ export const SubjectManagement: React.FC = () => {
   useEffect(() => {
     const fetchGrades = async () => {
       try {
-        const grades = await getGrades();
-        setGradeOptions(grades.map((g: any) => ({ id: g.id, name: g.name })));
+        const res = await api.get('/grades/levels');
+        setGradeOptions(res.data.map((g: any) => ({ id: g.id, name: g.name })));
       } catch (e) {
-        toast.error("Failed to load grades");
+        setGradeOptions([]);
       }
     };
     fetchGrades();
