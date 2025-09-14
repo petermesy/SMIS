@@ -10,3 +10,6 @@ export const config = {
   rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || '100'),
   uploadDir: process.env.UPLOAD_DIR || 'uploads',
 };
+
+
+console.log('Backend JWT Secret in use:', config.jwtSecret);

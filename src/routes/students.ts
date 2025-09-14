@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import { registerNextSemester } from '../controllers/studentController';
-import { getRegistrationEligibility } from '../controllers/studentController';
+import { registerNextSemester, getRegistrationEligibility } from '../controllers/studentController';
+import { authenticateJWT } from '../middlewares/auth';
 
 const router = Router();
 
 router.post('/register-next', registerNextSemester);
-router.get('/registration-eligibility', getRegistrationEligibility);
+router.get('/registration-eligibility', authenticateJWT, getRegistrationEligibility);
 
 export default router;

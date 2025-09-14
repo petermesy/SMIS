@@ -25,27 +25,27 @@ export default function StudentGrades() {
   const [eligible, setEligible] = useState(false);
   const [eligibilityChecked, setEligibilityChecked] = useState(false);
 
-  
-
-
-    useEffect(() => {
+  useEffect(() => {
     // Fetch eligibility for registration
     const checkEligibility = async () => {
       try {
         const res = await api.get('/students/registration-eligibility');
+        console.log('Eligibility API response:', res.data); // Log backend response
         setEligible(res.data.eligible);
-      } catch {
+      } catch (err) {
+        console.log('Eligibility API error:', err);
         setEligible(false);
       }
       setEligibilityChecked(true);
     };
     checkEligibility();
   }, []);
+
   const handleRegisterNext = async () => {
     setRegistering(true);
     setRegisterMessage('');
     try {
-await registerNextSemester(selectedSemester);
+      await registerNextSemester(selectedSemester);
       setRegisterMessage('Successfully registered for next semester/year!');
     } catch (err) {
       setRegisterMessage('Registration failed.');
@@ -60,6 +60,8 @@ await registerNextSemester(selectedSemester);
       fetchAcademicYearMap().then(setAcademicYearMap);
     }
   }, [user]);
+
+
 
   // Fetch grades and subjects when filters change
   useEffect(() => {
@@ -203,23 +205,21 @@ await registerNextSemester(selectedSemester);
         </CardContent>
       </Card>
       {/* Registration Button */}
-      {user?.role === 'student' && eligibleForNext && (
-        <div className="mt-6 flex flex-col items-center">
-                {eligibilityChecked && eligible && (
 
-          <button
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-            onClick={handleRegisterNext}
-            disabled={registering}
-          >
-            {registering ? 'Registering...' : 'Register for Next Semester/Year'}
-          </button>      )}
-
-          {registerMessage && (
-            <div className="mt-2 text-green-700 font-semibold">{registerMessage}</div>
-          )}
-        </div>
-      )}
+{user?.role === 'student' && eligibilityChecked && eligible && (
+  <div className="mt-6 flex flex-col items-center">
+    <button
+      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+      onClick={handleRegisterNext}
+      disabled={registering}
+    >
+      {registering ? 'Registering...' : 'Register for Next Semester/Year'}
+    </button>
+    {registerMessage && (
+      <div className="mt-2 text-green-700 font-semibold">{registerMessage}</div>
+    )}
+  </div>
+)}
     </div>
   );
 }

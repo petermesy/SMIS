@@ -3,28 +3,40 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+
+
 export const getRegistrationEligibility = async (req: Request, res: Response) => {
   try {
     const studentId = (req as any).user?.id;
     if (!studentId) return res.status(401).json({ error: 'Unauthorized' });
 
-    // Find the semester where registration is open
-    const semester = await prisma.semester.findFirst({
+    // Find the semester where registration is open (the next semester)
+    const openSemester = await prisma.semester.findFirst({
       where: { registrationOpen: true },
       orderBy: { startDate: 'desc' },
     });
-    if (!semester) return res.json({ eligible: false, reason: 'Registration not open' });
+    if (!openSemester) return res.json({ eligible: false, reason: 'Registration not open' });
 
-    // Get all grade entries for this student in this semester for English and Maths
+    // Find the previous semester (the most recent semester before the open one)
+    const previousSemester = await prisma.semester.findFirst({
+      where: {
+        startDate: { lt: openSemester.startDate },
+        academicYearId: openSemester.academicYearId,
+      },
+      orderBy: { startDate: 'desc' },
+    });
+    if (!previousSemester) return res.json({ eligible: false, reason: 'No previous semester found' });
+
+    // Get all grade entries for this student in the previous semester for English and Maths
     const grades = await prisma.gradeEntry.findMany({
       where: {
         studentId,
-        semesterId: semester.id,
+        semesterId: previousSemester.id,
         subject: { name: { in: ['English', 'Maths'] } },
       },
       include: { subject: true },
     });
- // Calculate average for each subject
+    // Calculate average for each subject
     const subjectAverages: Record<string, number> = {};
     for (const subjectName of ['English', 'Maths']) {
       const subjectGrades = grades.filter(g => g.subject.name === subjectName);
@@ -44,12 +56,14 @@ export const getRegistrationEligibility = async (req: Request, res: Response) =>
     res.json({
       eligible,
       averages: subjectAverages,
-      semesterId: semester.id,
+      previousSemesterId: previousSemester.id,
+      openSemesterId: openSemester.id,
     });
-  }catch (err) {
+  } catch (err) {
     res.status(500).json({ error: 'Failed to check eligibility' });
   }
 };
+
 
 
 
