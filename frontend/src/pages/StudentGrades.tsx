@@ -41,17 +41,21 @@ export default function StudentGrades() {
     checkEligibility();
   }, []);
 
-  const handleRegisterNext = async () => {
-    setRegistering(true);
-    setRegisterMessage('');
-    try {
-      await registerNextSemester(selectedSemester);
-      setRegisterMessage('Successfully registered for next semester/year!');
-    } catch (err) {
-      setRegisterMessage('Registration failed.');
-    }
-    setRegistering(false);
-  };
+const handleRegisterNext = async () => {
+  if (!selectedSemester) {
+    setRegisterMessage('Please select a semester.');
+    return;
+  }
+  setRegistering(true);
+  setRegisterMessage('');
+  try {
+    await registerNextSemester(selectedSemester);
+    setRegisterMessage('Successfully registered for next semester/year!');
+  } catch (err) {
+    setRegisterMessage('Registration failed.');
+  }
+  setRegistering(false);
+};
 
   // Fetch academic years and semesters on mount
   useEffect(() => {

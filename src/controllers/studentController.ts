@@ -106,7 +106,7 @@ export const enrollStudentInClass = async (req: Request, res: Response) => {
 // POST /students/:id/register-next-semester
 export const registerNextSemester = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const studentId = req.params.id;
+const studentId = (req as any).user?.id;
     const { currentSemesterId } = req.body;
     if (!currentSemesterId) {
       return res.status(400).json({ error: 'Current semester ID required' });
