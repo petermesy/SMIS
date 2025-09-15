@@ -15,6 +15,7 @@ import examRoutes from './exams';
 import teacherAssignmentsRoutes from './teacherAssignments';
 import studentRoutes from './students';
 import classSectionRoutes from './classSections';
+import studentRegistrationRequestRoutes from './studentRegistrationRequests';
 
 const router = Router();
 
@@ -35,6 +36,7 @@ router.use('/exams', examRoutes);
 router.use('/teacher-assignments', teacherAssignmentsRoutes);
 router.use('/students', studentRoutes);
 router.use('/class-sections', classSectionRoutes);
+router.use('/student-registration-requests', studentRegistrationRequestRoutes);
 
 // ... add other route modules here
 

@@ -49,7 +49,7 @@ app.use(cors({
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
-
+app.use('/api/grades', require('./routes/grades').default);
 app.use('/api', routes);
 
 app.use(errorHandler);

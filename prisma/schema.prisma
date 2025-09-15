@@ -38,6 +38,8 @@ model User {
   gradeEntriesAsStudent GradeEntry[] @relation("GradeEntryStudent")
   gradeEntriesCreated GradeEntry[] @relation("GradeEntryCreatedBy")
   gradeReports GradeReport[]
+  registrationRequests StudentRegistrationRequest[]
+
 }
 
 enum Role {
@@ -90,6 +92,8 @@ model Semester {
   registrationOpen Boolean @default(false) // Admin can open/close registration for this semester
   minAverage        Float?   // Minimum average grade required to register
   noFailedSubjects  Boolean? // If true, student must have no failed subjects
+  registrationRequests StudentRegistrationRequest[]
+
 }
 
 model ClassSection {
@@ -344,4 +348,16 @@ model Exam {
   instructions String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+model StudentRegistrationRequest {
+  id         String    @id @default(uuid())
+  studentId  String
+  semesterId String
+  status     String    @default("PENDING")
+  createdAt  DateTime  @default(now())
+  approvedAt DateTime?
+  adminId    String?
+
+  student  User     @relation(fields: [studentId], references: [id])
+  semester Semester @relation(fields: [semesterId], references: [id])
 }
