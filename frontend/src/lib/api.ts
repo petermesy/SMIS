@@ -348,8 +348,8 @@ export async function getSemesters() {
   const res = await api.get('/semesters');
   return res.data;
 }
-export async function registerNextSemester(currentSemesterId: string) {
-  const res = await api.post('/students/register-next', { currentSemesterId });
+export async function registerNextSemester(semesterId: string) {
+  const res = await api.post('/student-registration-requests', { semesterId });
   return res.data;
 }
 

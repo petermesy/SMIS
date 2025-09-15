@@ -41,6 +41,7 @@ export default function StudentGrades() {
     checkEligibility();
   }, []);
 
+
 const handleRegisterNext = async () => {
   if (!selectedSemester) {
     setRegisterMessage('Please select a semester.');
@@ -50,9 +51,13 @@ const handleRegisterNext = async () => {
   setRegisterMessage('');
   try {
     await registerNextSemester(selectedSemester);
-    setRegisterMessage('Successfully registered for next semester/year!');
-  } catch (err) {
-    setRegisterMessage('Registration failed.');
+    setRegisterMessage('Registration request submitted! Awaiting admin approval.');
+  } catch (err: any) {
+    setRegisterMessage(
+      err?.response?.data?.error ||
+      err?.message ||
+      'Registration request failed.'
+    );
   }
   setRegistering(false);
 };

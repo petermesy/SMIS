@@ -13,11 +13,18 @@ import {
   getGradeLevelsWithSections,
   listGrades
 } from '../controllers/gradeController';
-import type { RequestHandler } from 'express';
-
 const { body, param, validationResult } = require('express-validator');
 
 const router = Router();
+
+// --- Move this to the top, before any use ---
+const requireTeacher: RequestHandler = (req, res, next) => {
+  if ((req as any).user?.role !== 'teacher') {
+    return res.status(403).json({ error: 'Forbidden' });
+  }
+  next();
+};
+// --------------------------------------------
 
 // GET /api/grades/statistics
 router.get('/statistics', authenticateJWT as RequestHandler, getGradeStatistics as RequestHandler);
@@ -25,6 +32,8 @@ router.get('/levels', authenticateJWT as RequestHandler, listGrades as RequestHa
 router.get('/', authenticateJWT as RequestHandler, listAllGrades as RequestHandler);
 // GET /api/grades/categories/:subjectId
 router.get('/categories/:subjectId', authenticateJWT as RequestHandler, getGradeCategories as RequestHandler);
+// Only allow authenticated teachers to access class grades
+router.get('/class', authenticateJWT as RequestHandler, requireTeacher, getClassGrades as RequestHandler);
 
 // POST /api/grades/categories
 router.post(
@@ -42,21 +51,6 @@ router.post(
 
 // GET /api/grades/:studentId/:subjectId
 router.get('/:studentId/:subjectId', authenticateJWT as RequestHandler, getStudentGrades as RequestHandler);
-
-// Middleware to require teacher role
-const requireTeacher: RequestHandler = (req, res, next) => {
-  if ((req as any).user?.role !== 'teacher') {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
-  next();
-};
-
-// GET /api/grades/class (for teacher: all grades for class/subject/category/semester)
-router.get('/class/all', authenticateJWT as RequestHandler, requireTeacher, getClassGrades as RequestHandler);
-
-// GET /api/grades/levels-with-sections
-router.get('/levels-with-sections', authenticateJWT as RequestHandler, getGradeLevelsWithSections as RequestHandler);
-
 // POST /api/grades
 router.post(
   '/',

@@ -39,6 +39,7 @@ import React, { Suspense } from "react";
 // import AdminStudentSummary from './pages/AdminStudentSummary';
 const TeacherClassManagement = React.lazy(() => import("./pages/TeacherClassManagement"));
 import TeacherDashboardAlt from "@/pages/TeacherDashboardAlt"; // Importing the new alternative dashboard component
+import AdminRegistrationRequests from "@/pages/AdminRegistrationRequests"; // <-- Add this import
 
 // removed duplicate useAuth import
 
@@ -153,6 +154,11 @@ function AppRoutes() {
        <AddClassSection />
         </ProtectedRoute>
       } />
+      <Route path="/admin/registration-requests" element={
+  <ProtectedRoute>
+    <AdminRegistrationRequests />
+  </ProtectedRoute>
+} />
       <Route path="/settings" element={
         <ProtectedRoute>
           <Settings />
