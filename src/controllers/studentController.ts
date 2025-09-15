@@ -18,13 +18,31 @@ export const getRegistrationEligibility = async (req: Request, res: Response) =>
     if (!openSemester) return res.json({ eligible: false, reason: 'Registration not open' });
 
     // Find the previous semester (the most recent semester before the open one)
-    const previousSemester = await prisma.semester.findFirst({
+    let previousSemester = await prisma.semester.findFirst({
       where: {
         startDate: { lt: openSemester.startDate },
         academicYearId: openSemester.academicYearId,
       },
       orderBy: { startDate: 'desc' },
     });
+
+    // If not found, look for the last semester of the previous academic year
+    if (!previousSemester) {
+      // Find previous academic year
+      const prevAcademicYear = await prisma.academicYear.findFirst({
+        where: { endDate: { lt: openSemester.startDate } },
+        orderBy: { endDate: 'desc' },
+      });
+      if (prevAcademicYear) {
+        previousSemester = await prisma.semester.findFirst({
+          where: {
+            academicYearId: prevAcademicYear.id,
+            startDate: { lt: openSemester.startDate },
+          },
+          orderBy: { startDate: 'desc' },
+        });
+      }
+    }
     if (!previousSemester) return res.json({ eligible: false, reason: 'No previous semester found' });
 
     // Get all grade entries for this student in the previous semester for English and Maths
@@ -106,7 +124,7 @@ export const enrollStudentInClass = async (req: Request, res: Response) => {
 // POST /students/:id/register-next-semester
 export const registerNextSemester = async (req: Request, res: Response, next: NextFunction) => {
   try {
-const studentId = (req as any).user?.id;
+    const studentId = (req as any).user?.id;
     const { currentSemesterId } = req.body;
     if (!currentSemesterId) {
       return res.status(400).json({ error: 'Current semester ID required' });
@@ -151,18 +169,44 @@ const studentId = (req as any).user?.id;
         semesterId: currentSemesterId,
       },
       orderBy: { enrollmentDate: 'desc' },
+      include: { class: { include: { grade: true, classSection: true } } },
     });
     if (!latestEnrollment) {
       return res.status(404).json({ error: 'No current enrollment found for student' });
     }
 
-    // 7. Enroll student in next semester
+    let newClassId = latestEnrollment.classId;
+    let newAcademicYearId = latestEnrollment.academicYearId;
+
+    // If academic year changes, promote student to next grade/class
+    if (nextSemester.academicYearId !== latestEnrollment.academicYearId) {
+      const currentGradeLevel = latestEnrollment.class.grade.level;
+      const nextGrade = await prisma.grade.findFirst({ where: { level: currentGradeLevel + 1 } });
+      if (!nextGrade) {
+        return res.status(400).json({ error: 'No next grade found for promotion.' });
+      }
+      // Find class in next grade, same section name, and new academic year
+      const nextClass = await prisma.class.findFirst({
+        where: {
+          gradeId: nextGrade.id,
+          academicYearId: nextSemester.academicYearId,
+          classSection: { name: latestEnrollment.class.classSection.name },
+        },
+      });
+      if (!nextClass) {
+        return res.status(400).json({ error: 'No class found for next grade and section in new academic year.' });
+      }
+      newClassId = nextClass.id;
+      newAcademicYearId = nextClass.academicYearId;
+    }
+
+    // 7. Enroll student in next semester (and possibly new class/grade/year)
     const enrollment = await prisma.studentEnrollment.create({
       data: {
         studentId,
         semesterId: nextSemester.id,
-        classId: latestEnrollment.classId,
-        academicYearId: latestEnrollment.academicYearId,
+        classId: newClassId,
+        academicYearId: newAcademicYearId,
       },
     });
     res.status(201).json({ message:'Registered for next semester', enrollment });

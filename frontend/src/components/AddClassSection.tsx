@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { toast } from 'sonner';
 
 interface AcademicYear {
   id: string;
@@ -32,7 +31,7 @@ export const AddClassSection = () => {
       try {
         const [yearsRes, gradesRes] = await Promise.all([
           api.get('/academic-years'),
-          api.get('/grades'),
+          api.get('/grades/levels'),
         ]);
         setAcademicYears(yearsRes.data);
         setGrades(gradesRes.data);
@@ -69,35 +68,57 @@ export const AddClassSection = () => {
   if (error) return <div>{error}</div>;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-2">
-      <div>
-        <label>Section Name (e.g. A, B, C): </label>
-        <input value={name} onChange={e => setName(e.target.value)} required />
-      </div>
-      <div>
-        <label>Grade: </label>
-        <select value={gradeId} onChange={e => setGradeId(e.target.value)} required>
-          <option value="" disabled>Select grade</option>
-          {grades.length === 0 && <option disabled>No grades found</option>}
-          {grades.map(grade => (
-            <option key={grade.id} value={grade.id}>
-              {grade.name} {grade.level ? `(Level ${grade.level})` : ''}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div>
-        <label>Academic Year: </label>
-        <select value={academicYearId} onChange={e => setAcademicYearId(e.target.value)} required>
-          <option value="" disabled>Select academic year</option>
-          {academicYears.length === 0 && <option disabled>No academic years found</option>}
-          {academicYears.map(year => (
-            <option key={year.id} value={year.id}>{year.name}</option>
-          ))}
-        </select>
-      </div>
-      <button type="submit">Add Class Section</button>
-      {message && <div>{message}</div>}
-    </form>
+    <Card className="max-w-md mx-auto mt-8">
+      <CardHeader>
+        <CardTitle>Add Class Section</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <Form>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block mb-1 font-medium">Section Name (e.g. A, B, C):</label>
+              <input
+                className="w-full border rounded px-2 py-1"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="block mb-1 font-medium">Grade:</label>
+              <Select value={gradeId} onValueChange={setGradeId} required>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {grades.length === 0 && <SelectItem value="" disabled>No grades found</SelectItem>}
+                  {grades.map(grade => (
+                    <SelectItem key={grade.id} value={grade.id}>
+                      {grade.name} {grade.level ? `(Level ${grade.level})` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block mb-1 font-medium">Academic Year:</label>
+              <Select value={academicYearId} onValueChange={setAcademicYearId} required>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select academic year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {academicYears.length === 0 && <SelectItem value="" disabled>No academic years found</SelectItem>}
+                  {academicYears.map(year => (
+                    <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit" className="w-full">Add Class Section</Button>
+            {message && <div className="mt-2 text-center text-sm text-green-600">{message}</div>}
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
 };
