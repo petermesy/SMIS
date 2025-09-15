@@ -200,9 +200,29 @@ export const UserManagement = () => {
                     <td className="p-2">{user.phone || 'N/A'}</td>
                     <td className="p-2">{user.gender ? user.gender.charAt(0).toUpperCase() + user.gender.slice(1) : 'N/A'}</td>
                     <td className="p-2">
-                      <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
-                        {user.status}
-                      </Badge>
+                      {user.role && user.role.toLowerCase() === 'student' ? (
+                        <select
+                          value={user.status}
+                          onChange={async (e) => {
+                            const value = e.target.value;
+                            try {
+                              const updated = await updateUser(user.id, { status: value.toUpperCase() });
+                              setUsers((prev) => prev.map(u => u.id === user.id ? { ...u, status: value } : u));
+                              toast.success(`Status changed to ${value}`);
+                            } catch {
+                              toast.error('Failed to update status');
+                            }
+                          }}
+                          className="border rounded px-2 py-1 w-24 bg-white"
+                        >
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                      ) : (
+                        <Badge variant={user.status === 'active' ? 'default' : 'secondary'}>
+                          {user.status}
+                        </Badge>
+                      )}
                     </td>
                     <td className="p-2">
                       <div className="flex space-x-2">

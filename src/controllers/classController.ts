@@ -111,7 +111,7 @@ export const getStudentsByClass = async (req: Request, res: Response) => {
       .filter(s => {
         if (!s || seen.has(s.id)) return false;
         seen.add(s.id);
-        return true;
+  return s.status !== 'INACTIVE';
       });
     res.json(students);
   } catch (e) {

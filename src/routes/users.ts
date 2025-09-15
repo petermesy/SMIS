@@ -87,7 +87,6 @@ router.put(
   '/:id',
   authenticateJWT,
   requireRole('ADMIN'),
-  userValidation,
   updateUser as RequestHandler
 );
 
