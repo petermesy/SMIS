@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
-const prisma = new PrismaClient();
 
 export const getAnnouncements = async (req: Request, res: Response) => {
   const announcements = await prisma.announcement.findMany({ orderBy: { createdAt: 'desc' } });

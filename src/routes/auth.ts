@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { authenticateJWT, AuthRequest } from '../middlewares/auth';
@@ -7,7 +6,7 @@ import { config } from '../config';
 import { body, validationResult } from 'express-validator';
 
 const router = Router();
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 // Validation middleware for login
 const loginValidation = [

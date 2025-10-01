@@ -69,7 +69,7 @@ export const getClassGrades = async (params: {
   if (params.semesterId) queryString.append('semesterId', params.semesterId);
   if (params.academicYearId) queryString.append('academicYearId', params.academicYearId);
 
-  const response = await fetch(`/api/grades/class/all?${queryString.toString()}`, {
+  const response = await fetch(`/api/grades/class?${queryString.toString()}`, {
     headers: getAuthHeader(),
   });
 

@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { computeEnglishAndMathsAveragesForAcademicYear } from '../lib/gradeUtils';
+import { prisma } from '../lib/prisma';
 
 
 
@@ -45,37 +44,16 @@ export const getRegistrationEligibility = async (req: Request, res: Response) =>
     }
     if (!previousSemester) return res.json({ eligible: false, reason: 'No previous semester found' });
 
-    // Get all grade entries for this student in the previous semester for English and Maths
-    const grades = await prisma.gradeEntry.findMany({
-      where: {
-        studentId,
-        semesterId: previousSemester.id,
-        subject: { name: { in: ['English', 'Maths'] } },
-      },
-      include: { subject: true },
-    });
-    // Calculate average for each subject
-    const subjectAverages: Record<string, number> = {};
-    for (const subjectName of ['English', 'Maths']) {
-      const subjectGrades = grades.filter(g => g.subject.name === subjectName);
-      if (subjectGrades.length === 0) {
-        subjectAverages[subjectName] = 0;
-      } else {
-        const total = subjectGrades.reduce((sum, g) => sum + (g.pointsEarned || 0), 0);
-        const max = subjectGrades.reduce((sum, g) => sum + (g.totalPoints || 0), 0);
-        subjectAverages[subjectName] = max > 0 ? (total / max) * 100 : 0;
-      }
-    }
-
-    const eligible =
-      subjectAverages['English'] >= 50 &&
-      subjectAverages['Maths'] >= 50;
+    // We need to check both semesters for the academic year that contains the previousSemester
+    const academicYearToCheckId = previousSemester.academicYearId;
+    const averagesResult = await computeEnglishAndMathsAveragesForAcademicYear(studentId, academicYearToCheckId);
 
     res.json({
-      eligible,
-      averages: subjectAverages,
-      previousSemesterId: previousSemester.id,
+      eligible: averagesResult.eligible,
+      averages: { English: averagesResult.englishPercent, Maths: averagesResult.mathsPercent },
+      previousAcademicYearId: academicYearToCheckId,
       openSemesterId: openSemester.id,
+      reason: averagesResult.reason,
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to check eligibility' });
@@ -180,6 +158,11 @@ export const registerNextSemester = async (req: Request, res: Response, next: Ne
 
     // If academic year changes, promote student to next grade/class
     if (nextSemester.academicYearId !== latestEnrollment.academicYearId) {
+      // Before promoting across academic years, ensure student meets English & Maths both-semester averages >= 50%
+        const eligibility = await computeEnglishAndMathsAveragesForAcademicYear(studentId, latestEnrollment.academicYearId);
+        if (!eligibility.eligible) {
+          return res.status(403).json({ error: 'Student does not meet promotion requirements', details: { English: eligibility.englishPercent, Maths: eligibility.mathsPercent, reason: eligibility.reason } });
+        }
       const currentGradeLevel = latestEnrollment.class.grade.level;
       const nextGrade = await prisma.grade.findFirst({ where: { level: currentGradeLevel + 1 } });
       if (!nextGrade) {
@@ -215,3 +198,5 @@ export const registerNextSemester = async (req: Request, res: Response, next: Ne
     next(err);
   }
 };
+
+// ...helper moved to src/lib/gradeUtils.ts

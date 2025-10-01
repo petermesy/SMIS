@@ -24,6 +24,12 @@ export default function StudentGrades() {
   const eligibleForNext = true;
   const [eligible, setEligible] = useState(false);
   const [eligibilityChecked, setEligibilityChecked] = useState(false);
+  const [eligibilityAverages, setEligibilityAverages] = useState<{ English?: number; Maths?: number }>({});
+  const [eligibilityReason, setEligibilityReason] = useState<string | undefined>(undefined);
+  const [registrationOpen, setRegistrationOpen] = useState(false);
+  const [openSemesterId, setOpenSemesterId] = useState<string | null>(null);
+  const [semestersList, setSemestersList] = useState<any[]>([]);
+  const [openSemesterAcademicYearId, setOpenSemesterAcademicYearId] = useState<string | null>(null);
 
   useEffect(() => {
     // Fetch eligibility for registration
@@ -32,6 +38,11 @@ export default function StudentGrades() {
         const res = await api.get('/students/registration-eligibility');
         console.log('Eligibility API response:', res.data); // Log backend response
         setEligible(res.data.eligible);
+        setRegistrationOpen(!!res.data.openSemesterId);
+        setOpenSemesterId(res.data.openSemesterId || null);
+        if (res.data.previousAcademicYearId) setOpenSemesterAcademicYearId(res.data.previousAcademicYearId);
+        if (res.data.averages) setEligibilityAverages(res.data.averages);
+        if (res.data.reason) setEligibilityReason(res.data.reason);
       } catch (err) {
         console.log('Eligibility API error:', err);
         setEligible(false);
@@ -39,6 +50,19 @@ export default function StudentGrades() {
       setEligibilityChecked(true);
     };
     checkEligibility();
+  }, []);
+
+  // Fetch full semesters so we can show the academic year for the open semester
+  useEffect(() => {
+    const loadSemesters = async () => {
+      try {
+        const res = await api.get('/semesters');
+        setSemestersList(res.data || []);
+      } catch (err) {
+        console.error('Failed to load semesters for registration UI', err);
+      }
+    };
+    loadSemesters();
   }, []);
 
 
@@ -215,20 +239,66 @@ const handleRegisterNext = async () => {
       </Card>
       {/* Registration Button */}
 
-{user?.role === 'student' && eligibilityChecked && eligible && (
-  <div className="mt-6 flex flex-col items-center">
-    <button
-      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
-      onClick={handleRegisterNext}
-      disabled={registering}
-    >
-      {registering ? 'Registering...' : 'Register for Next Semester/Year'}
-    </button>
-    {registerMessage && (
-      <div className="mt-2 text-green-700 font-semibold">{registerMessage}</div>
+{user?.role === 'student' && eligibilityChecked && registrationOpen && (
+  <div className="mt-6 flex flex-col items-center w-full">
+    {/* Banner showing registration is open for this semester/academic year */}
+    <div className="w-full mb-3 p-3 rounded bg-green-100 border border-green-200 text-green-800">
+      {openSemesterId ? (
+        <div>
+          Registration is OPEN for <strong>{semesterMap[openSemesterId] || openSemesterId}</strong>
+          {(() => {
+            // Try to show academic year for the open semester
+            const sem = semestersList.find(s => s.id === openSemesterId);
+            if (sem && sem.academicYearId && academicYearMap[sem.academicYearId]) {
+              return <> ({academicYearMap[sem.academicYearId]})</>;
+            }
+            if (openSemesterAcademicYearId && academicYearMap[openSemesterAcademicYearId]) {
+              return <> ({academicYearMap[openSemesterAcademicYearId]})</>;
+            }
+            return null;
+          })()}
+        </div>
+      ) : (
+        <div>Registration is currently open.</div>
+      )}
+    </div>
+
+    {/* If eligible, show actionable register button. If not, show clear ineligibility message with averages. */}
+    {eligible ? (
+      <div>
+        <button
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+          onClick={handleRegisterNext}
+          disabled={registering}
+        >
+          {registering ? 'Registering...' : 'Register for Next Semester/Year'}
+        </button>
+        {registerMessage && (
+          <div className="mt-2 text-green-700 font-semibold">{registerMessage}</div>
+        )}
+      </div>
+    ) : (
+      <div className="w-full max-w-2xl p-3 border rounded bg-yellow-50 text-red-700">
+        <div className="font-semibold">You are not eligible to register for the upcoming semester/year.</div>
+        <div className="mt-2">Your averages:</div>
+        <div>English: <strong>{eligibilityAverages.English !== undefined ? eligibilityAverages.English.toFixed(2) + '%' : 'N/A'}</strong></div>
+        <div>Maths: <strong>{eligibilityAverages.Maths !== undefined ? eligibilityAverages.Maths.toFixed(2) + '%' : 'N/A'}</strong></div>
+        <div className="mt-2">To be eligible you must have both English and Maths averages at or above 50% across the academic year.</div>
+        {eligibilityReason && <div className="mt-2 text-sm text-red-600">Reason: {eligibilityReason}</div>}
+      </div>
     )}
   </div>
 )}
+      {/* Eligibility details */}
+      {user?.role === 'student' && eligibilityChecked && (
+        <div className="mt-4 p-3 border rounded bg-gray-50">
+          <div className="font-medium">Registration eligibility</div>
+          <div>Eligible: <strong>{eligible ? 'Yes' : 'No'}</strong></div>
+          <div>English average: <strong>{eligibilityAverages.English ? eligibilityAverages.English.toFixed(2) + '%' : 'N/A'}</strong></div>
+          <div>Maths average: <strong>{eligibilityAverages.Maths ? eligibilityAverages.Maths.toFixed(2) + '%' : 'N/A'}</strong></div>
+          {eligibilityReason && <div className="text-sm text-red-600">Reason: {eligibilityReason}</div>}
+        </div>
+      )}
     </div>
   );
 }

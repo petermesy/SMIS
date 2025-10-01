@@ -138,7 +138,7 @@ export const bulkAssignStudentsToClass = async (req, res) => {
 };
 import { parse } from 'csv-parse';
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import bcrypt from 'bcryptjs';
 
 
@@ -244,7 +244,7 @@ export const changePassword = async (req: Request, res: Response) => {
   res.json({ message: 'Password changed successfully' });
 };
 
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export const listUsers = async (req: Request, res: Response) => {
   const { role, status, search, page = 1, limit = 20 } = req.query;

@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 
-const prisma = new PrismaClient();
 
 // List all academic years
 export const listAcademicYears = async (req: Request, res: Response, next: NextFunction) => {

@@ -1,8 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../types';
-import { PrismaClient } from '@prisma/client';
 
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 // List children for a parent
 export const listChildren = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {

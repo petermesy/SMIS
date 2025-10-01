@@ -3,10 +3,10 @@ import { getClassGrades, getGrades } from '../controllers/gradeController'; // A
 
 const router = Router();
 
-// Fetch all grades (used by AcademicManagement)
-router.get('/grades', getGrades);
+// Fetch all grades (used by AcademicManagement) => mounted at /api/grades
+router.get('/', getGrades);
 
-// Fetch grades for a specific class (for TeacherClassManagement)
-router.get('/grades/class/all', getClassGrades);
+// Fetch grades for a specific class (for TeacherClassManagement) => /api/grades/class/all
+router.get('/class/all', getClassGrades);
 
 export default router;

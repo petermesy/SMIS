@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
+import { computeEnglishAndMathsAveragesForAcademicYear } from '../lib/gradeUtils';
 
 // Student submits registration request
 export const submitRegistrationRequest = async (req: Request, res: Response) => {
@@ -80,6 +80,12 @@ export const approveRegistrationRequest = async (req: Request, res: Response) =>
 
     // If academic year changes, promote student to next grade/class
     if (targetSemester.academicYearId !== latestEnrollment.academicYearId) {
+      // Ensure student meets promotion requirements (English & Maths averages >= 50% across the academic year)
+      const eligibility = await computeEnglishAndMathsAveragesForAcademicYear(request.studentId, latestEnrollment.academicYearId);
+      if (!eligibility.eligible) {
+        console.warn('Student does not meet promotion requirements', request.studentId, eligibility);
+        return res.status(403).json({ error: 'Student does not meet promotion requirements', details: { English: eligibility.englishPercent, Maths: eligibility.mathsPercent, reason: eligibility.reason } });
+      }
       const currentGradeLevel = latestEnrollment.class.grade.level;
       const nextGrade = await prisma.grade.findFirst({ where: { level: currentGradeLevel + 1 } });
       if (nextGrade) {
@@ -181,3 +187,5 @@ export const rejectRegistrationRequest = async (req: Request, res: Response) => 
     res.status(500).json({ error: 'Internal server error', details: err instanceof Error ? err.message : err });
   }
 };
+
+// ...helper moved to src/lib/gradeUtils.ts

@@ -1,10 +1,8 @@
 import { Response, NextFunction } from 'express';
 import { AuthenticatedRequest } from '../types';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../lib/prisma';
 import path from 'path';
 import fs from 'fs';
-
-const prisma = new PrismaClient();
 
 // List all documents for the current user
 export const listDocuments = async (req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> => {

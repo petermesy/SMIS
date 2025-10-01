@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 // Returns all classes and subjects assigned to the logged-in teacher
 export const getTeacherAssignments = async (req: Request, res: Response) => {
