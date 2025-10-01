@@ -84,7 +84,8 @@ export const Home = () => {
                 <h1 className="text-xl font-bold text-gray-900">SMIS</h1>
               </div>
             </div>
-            <Button onClick={() => setShowLoginForm(true)} className="bg-blue-600 hover:bg-blue-700">
+            <Button                 onClick={() => window.location.href = '/dashboard'} 
+ className="bg-blue-600 hover:bg-blue-700">
               Login
               <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
@@ -113,10 +114,10 @@ export const Home = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button 
               size="lg" 
-              onClick={() => setShowLoginForm(true)}
+                onClick={() => window.location.href = '/dashboard'} 
               className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3"
             >
-              Get Started
+              Login
               <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
             <Button size="lg" variant="outline" className="px-8 py-3">
@@ -278,7 +279,7 @@ export const Home = () => {
           </div>
           <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
             {/* <p>&copy; 2024 Sawla Secondary and Preparatory School. All rights reserved.</p> */}
-            <p>&copy; 2024 Mahtot Primary School. All rights reserved.</p>
+            <p>&copy; 2024 Sawla Secondary School. All rights reserved.</p>
           </div>
         </div>
       </footer>
@@ -291,13 +292,7 @@ export const Home = () => {
             <p className="text-gray-600 mb-6">
               Use the demo credentials to explore the system:
             </p>
-            <div className="space-y-2 text-sm bg-gray-50 p-4 rounded-lg mb-6">
-              <div><strong>Admin:</strong> admin@school.com</div>
-              <div><strong>Teacher:</strong> teacher@school.com</div>
-              <div><strong>Student:</strong> student@school.com</div>
-              <div><strong>Parent:</strong> parent@school.com</div>
-              <div className="text-gray-500 mt-2">Password: any password</div>
-            </div>
+         
             <div className="flex space-x-4">
               <Button 
                 onClick={() => setShowLoginForm(false)} 

@@ -35,7 +35,7 @@ export const RegistrationControl = ({ semester }) => {
         />
         Registration Open
       </label>
-      <br />
+      <br/>
       <label>
         Minimum Average (%):
         <input

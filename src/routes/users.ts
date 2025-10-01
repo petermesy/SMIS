@@ -1,3 +1,4 @@
+import { bulkAssignStudentsToClass } from '../controllers/userController';
 
 import { Router, RequestHandler } from 'express';
 import multer from 'multer';
@@ -22,6 +23,15 @@ router.post(
   requireRole('ADMIN'),
   upload.single('file'),
   require('../controllers/userController').importStudents as RequestHandler
+);
+
+// POST /api/users/assign-students-csv - Bulk assign students to class via CSV
+router.post(
+  '/assign-students-csv',
+  authenticateJWT,
+  requireRole('ADMIN'),
+  upload.single('file'),
+  bulkAssignStudentsToClass
 );
 
 // POST /api/users/change-password - Change password for logged-in user

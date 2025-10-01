@@ -1,3 +1,21 @@
+// Export all classes as CSV
+export async function exportAllClassesCsv() {
+  const res = await api.get('/classes');
+  const classes = res.data.classes || res.data;
+  let csv = 'id,grade,section\n';
+  for (const cls of classes) {
+    csv += `${cls.id},${cls.grade?.name || ''},${cls.classSection?.name || ''}\n`;
+  }
+  return csv;
+}
+// Student History API
+export async function addStudentHistory(data: { studentId: string; event: string; count: number }) {
+  return (await api.post('/student-history', data)).data;
+}
+
+export async function getStudentHistory(studentId: string) {
+  return (await api.get(`/student-history/${studentId}`)).data;
+}
 // Change password for logged-in user
 export async function changePassword(oldPassword: string, newPassword: string) {
   const res = await api.post('/users/change-password', { oldPassword, newPassword });
@@ -13,6 +31,7 @@ export async function getGrades(params?: any) {
     throw err;
   }
 }
+
 // Get all grades for a class, subject, category, semester (for teacher view)
 // export async function getClassGrades(params: { classId: string; subjectId: string; categoryId?: string; semesterId?: string; academicYearId?: string }) {
 //   try {
@@ -135,6 +154,23 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Response interceptor to catch 401s and provide clearer debug output
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error?.response?.status === 401) {
+      console.warn('API responded with 401 Unauthorized - clearing token for debugging');
+      try {
+        localStorage.removeItem('token');
+      } catch (e) {
+        console.error('Failed to remove token', e);
+      }
+    }
+    console.error('API error:', error?.response?.data || error?.message);
+    return Promise.reject(error);
+  }
+);
 
 export async function login(email: string, password: string) {
   const res = await api.post('/auth/login', { email, password });

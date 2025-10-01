@@ -13,6 +13,7 @@ import parentRoutes from './parents';
 import subjectRoutes from './subjects';
 import examRoutes from './exams';
 import teacherAssignmentsRoutes from './teacherAssignments';
+import studentHistoryRoutes from './studentHistory';
 import studentRoutes from './students';
 import classSectionRoutes from './classSections';
 import studentRegistrationRequestRoutes from './studentRegistrationRequests';
@@ -37,6 +38,7 @@ router.use('/teacher-assignments', teacherAssignmentsRoutes);
 router.use('/students', studentRoutes);
 router.use('/class-sections', classSectionRoutes);
 router.use('/student-registration-requests', studentRegistrationRequestRoutes);
+router.use('/student-history', studentHistoryRoutes);
 
 // ... add other route modules here
 

@@ -1,3 +1,5 @@
+import { useAuth } from '@/contexts/AuthContext';
+import BulkAssignStudents from '../components/admin/BulkAssignStudents';
 
 import { useEffect, useState } from 'react';
 import TeacherClassManagement from './TeacherClassManagement';
@@ -8,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 
 export default function ClassAssignment() {
+  const { user } = useAuth();
   const [classes, setClasses] = useState<any[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [students, setStudents] = useState<any[]>([]);
@@ -40,6 +43,12 @@ export default function ClassAssignment() {
       }
     } else {
       setSemesters([]);
+      {/* Bulk student assignment for admins */}
+      {user?.role === 'admin' && (
+        <div style={{ margin: '2rem 0' }}>
+          <BulkAssignStudents />
+        </div>
+      )}
     }
     setSelectedSemester('');
   }, [selectedAcademicYear, academicYears]);
@@ -175,6 +184,13 @@ export default function ClassAssignment() {
           <Button onClick={handleAssignStudent}>Assign Student</Button>
         </CardContent>
       </Card>
+
+      {/* Bulk student assignment for admins */}
+      {user?.role === 'admin' && (
+        <div style={{ margin: '2rem 0' }}>
+          <BulkAssignStudents />
+        </div>
+      )}
 
       {/* Teacher score management UI */}
       <TeacherClassManagement />

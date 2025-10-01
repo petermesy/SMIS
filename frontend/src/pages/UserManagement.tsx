@@ -12,6 +12,9 @@ import { User, UserPlus, Edit, Trash2, Search, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 import { getUsers, createUser, updateUser, deleteUser } from '@/lib/api';
 import { BulkUserUpload } from "@/components/admin/BulkUserUpload";
+import { StudentHistory } from "@/components/StudentHistory";
+import BulkAssignStudents from '../components/admin/BulkAssignStudents';
+
 interface UserData {
   id: string;
   firstName: string;
@@ -40,16 +43,21 @@ export const UserManagement = () => {
   const [isEditing, setIsEditing] = useState(false);
 
   // Fetch users from backend
+  const fetchUsers = async () => {
+    try {
+      const data = await getUsers();
+      setUsers(data.users || []);
+    } catch (e) {
+      toast.error('Failed to load users');
+    }
+  };
+
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const data = await getUsers();
-        setUsers(data.users || []);
-      } catch (e) {
-        toast.error('Failed to load users');
-      }
-    };
     fetchUsers();
+    // Listen for bulk upload success event
+    const handler = () => fetchUsers();
+    window.addEventListener("bulkUserUploadSuccess", handler);
+    return () => window.removeEventListener("bulkUserUploadSuccess", handler);
   }, [filterRole]);
 
   const filteredUsers = users.filter(user => {
@@ -173,12 +181,14 @@ export const UserManagement = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left p-2">Name</th>
+                  <th className="text-left p-2">Full Name</th>
                   <th className="text-left p-2">Email</th>
                   <th className="text-left p-2">Role</th>
                   <th className="text-left p-2">Phone</th>
                   <th className="text-left p-2">Gender</th>
                   <th className="text-left p-2">Status</th>
+                  <th className="text-left p-2">School</th>
+                  <th className="text-left p-2">History</th>
                   <th className="text-left p-2">Actions</th>
                 </tr>
               </thead>
@@ -188,7 +198,11 @@ export const UserManagement = () => {
                     <td className="p-2">
                       <div className="flex items-center space-x-2">
                         <User className="w-4 h-4 text-gray-400" />
-                        <span>{user.firstName} {user.lastName}</span>
+                        <span>
+                          {user.firstName} {user.lastName}
+                          {user.fatherName ? ` / ${user.fatherName}` : ''}
+                          {user.grandFatherName ? `  ${user.grandFatherName}` : ''}
+                        </span>
                       </div>
                     </td>
                     <td className="p-2">{user.email}</td>
@@ -224,6 +238,14 @@ export const UserManagement = () => {
                         </Badge>
                       )}
                     </td>
+                    {/* School column */}
+                    <td className="p-2">{user.school || 'N/A'}</td>
+                    {/* History column for students */}
+                    <td className="p-2">
+                      {user.role && user.role.toLowerCase() === 'student' ? (
+                        <StudentHistory studentId={user.id} compact />
+                      ) : 'N/A'}
+                    </td>
                     <td className="p-2">
                       <div className="flex space-x-2">
                         <Button
@@ -258,6 +280,12 @@ export const UserManagement = () => {
         onSave={handleSaveUser}
         isEditing={isEditing}
       />
+      {/* Student History for selected student */}
+      {isDialogOpen && selectedUser && selectedUser.role === 'student' && (
+        <div className="mt-6">
+          <StudentHistory studentId={selectedUser.id} />
+        </div>
+      )}
     </div>
   );
 };

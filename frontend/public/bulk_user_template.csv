@@ -1,3 +1,2 @@
-firstName,lastName,email,role,gender,phone,address
-John,Doe,john.doe@email.com,STUDENT,Male,1234567890,123 Main St
-Jane,Smith,jane.smith@email.com,TEACHER,Female,0987654321,456 Elm St
+fullName,email,role,gender,phone,address,school,history
+Peter Messay Mesfin,peter@email.com,STUDENT,Male,1234567890,AA,Addis Ababa,"dropped out:1;repeated:2"

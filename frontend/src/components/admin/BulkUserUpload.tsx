@@ -15,6 +15,7 @@ export const BulkUserUpload: React.FC = () => {
     }
   };
 
+  // Accept a callback to refresh users after upload
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!file) return;
@@ -26,6 +27,8 @@ export const BulkUserUpload: React.FC = () => {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setResult(res.data);
+      // Trigger a custom event to notify parent to refresh users
+      window.dispatchEvent(new Event("bulkUserUploadSuccess"));
     } catch (err: any) {
       setResult({ error: err.response?.data?.error || "Upload failed" });
     }
@@ -56,9 +59,26 @@ export const BulkUserUpload: React.FC = () => {
           {loading ? "Uploading..." : "Upload CSV"}
         </Button>
         {result && (
-          <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto mt-2">
-            {JSON.stringify(result, null, 2)}
-          </pre>
+          <div className="bg-gray-100 p-2 rounded text-xs overflow-x-auto mt-2">
+            {result.error ? (
+              <pre>{JSON.stringify(result, null, 2)}</pre>
+            ) : (
+              <>
+                <div><b>Upload Summary:</b></div>
+                <div>Users created: {result.successCount}</div>
+                <div>Student history records created: {result.historyCount}</div>
+                {result.errorCount > 0 && (
+                  <div className="text-red-600">Errors: {result.errorCount}</div>
+                )}
+                {result.errors && result.errors.length > 0 && (
+                  <details>
+                    <summary>Show errors</summary>
+                    <pre>{JSON.stringify(result.errors, null, 2)}</pre>
+                  </details>
+                )}
+              </>
+            )}
+          </div>
         )}
       </form>
     </Form>

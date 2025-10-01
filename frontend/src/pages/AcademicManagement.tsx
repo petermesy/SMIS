@@ -613,7 +613,7 @@ export const AcademicManagement = () => {
               className="border rounded px-2 py-1 text-sm w-48"
               value={selectedSemester}
               onChange={e => setSelectedSemester(e.target.value)}
-            >
+            >bd
               <option value="">All</option>
               {semesters && semesters.length > 0
                 ? semesters.map(sem => (

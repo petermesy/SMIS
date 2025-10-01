@@ -30,7 +30,8 @@ const navigationItems = {
     { name: 'Manage Semesters', href: '/admin/semesters', icon: Calendar },
     { name: 'Add Section', href: '/admin/class-sections', icon: Calendar },
     { name: 'Registration Requests', href: '/admin/registration-requests', icon: ClipboardList },
-
+    { name: 'Student History', href: '/student-history', icon: ClipboardList },
+    
     { name: 'Communications', href: '/communications', icon: MessageCircle },
     { name: 'Documents', href: '/documents', icon: FileText },
     { name: 'Settings', href: '/settings', icon: Settings },

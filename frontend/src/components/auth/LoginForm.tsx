@@ -92,12 +92,7 @@ export const LoginForm = () => {
             </Button>
           </form>
           
-          <div className="mt-6 text-center text-sm text-gray-600">
-            <p>Demo Accounts:</p>
-            <p>admin@school.com | teacher@school.com</p>
-            <p>student@school.com | parent@school.com</p>
-            <p className="text-xs mt-1">Password: any</p>
-          </div>
+           
         </CardContent>
       </Card>
     </div>
