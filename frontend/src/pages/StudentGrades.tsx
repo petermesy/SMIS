@@ -128,7 +128,25 @@ const handleRegisterNext = async () => {
 
   return (
     <div className="p-6 space-y-6">
+       {/* Current Enrollment Summary */}
+      {currentEnrollment && (
+        <div className="mt-4 p-3 border rounded bg-white shadow-sm max-w-md">
+          <div className="font-semibold">Current Enrollment</div>
+          <div className="mt-1">
+            {currentEnrollment.gradeName || `Grade ${currentEnrollment.gradeLevel}`} {currentEnrollment.section ? ` ${currentEnrollment.section}` : ''}
+          </div>
+          <div className="text-sm text-gray-600 mt-1">
+            Academic year: {currentEnrollment.academicYearId && academicYearMap[currentEnrollment.academicYearId] ? academicYearMap[currentEnrollment.academicYearId] : currentEnrollment.academicYearId}
+          </div>
+          {((currentEnrollment.semesterName) || (currentEnrollment.semesterId && semesterMap[currentEnrollment.semesterId])) && (
+            <div className="text-sm text-gray-600 mt-1">
+              Semester: {currentEnrollment.semesterName || (currentEnrollment.semesterId ? semesterMap[currentEnrollment.semesterId] : '')}
+            </div>
+          )}
+        </div>
+      )}
       <Card>
+        
         <CardHeader>
           <CardTitle>My Scores</CardTitle>
         </CardHeader>
@@ -293,18 +311,7 @@ const handleRegisterNext = async () => {
     )}
   </div>
 )}
-      {/* Current Enrollment Summary */}
-      {currentEnrollment && (
-        <div className="mt-4 p-3 border rounded bg-white shadow-sm max-w-md">
-          <div className="font-semibold">Current Enrollment</div>
-          <div className="mt-1">
-            {currentEnrollment.gradeName || `Grade ${currentEnrollment.gradeLevel}`} {currentEnrollment.section ? ` ${currentEnrollment.section}` : ''}
-          </div>
-          <div className="text-sm text-gray-600 mt-1">
-            Academic year: {currentEnrollment.academicYearId && academicYearMap[currentEnrollment.academicYearId] ? academicYearMap[currentEnrollment.academicYearId] : currentEnrollment.academicYearId}
-          </div>
-        </div>
-      )}
+     
       {/* Eligibility details */}
       {user?.role === 'student' && eligibilityChecked && (
         <div className="mt-4 p-3 border rounded bg-gray-50">

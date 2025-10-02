@@ -43,6 +43,7 @@ export const getRegistrationEligibility = async (req: Request, res: Response) =>
           section: latestEnrollment.class?.classSection?.name || null,
           academicYearId: latestEnrollment.academicYearId,
           semesterId: latestEnrollment.semesterId || null,
+          semesterName: latestEnrollment.semester?.name || null,
         }
       : null;
 
@@ -69,10 +70,10 @@ async function getStudentSemesterStats(studentId: string, semesterId: string) {
     select: { pointsEarned: true, totalPoints: true },
   });
   if (grades.length === 0) return { avg: 0, hasFailed: true };
-  const totalEarned = grades.reduce((sum, g) => sum + (g.pointsEarned || 0), 0);
-  const totalPossible = grades.reduce((sum, g) => sum + (g.totalPoints || 0), 0);
+  const totalEarned = grades.reduce((sum: number, g: any) => sum + (g.pointsEarned || 0), 0);
+  const totalPossible = grades.reduce((sum: number, g: any) => sum + (g.totalPoints || 0), 0);
   const avg = totalPossible > 0 ? (totalEarned / totalPossible) * 100 : 0;
-  const hasFailed = grades.some(g => (g.pointsEarned || 0) < (g.totalPoints || 0) * 0.5);
+  const hasFailed = grades.some((g: any) => (g.pointsEarned || 0) < (g.totalPoints || 0) * 0.5);
   return { avg, hasFailed };
 }
 
@@ -139,13 +140,13 @@ export const registerNextSemester = async (req: Request, res: Response, next: Ne
       return res.status(400).json({ error: 'Academic year has no semesters to evaluate' });
     }
 
-    const semesterIds = semestersInYear.map(s => s.id);
-    const gradeEntries = await prisma.gradeEntry.findMany({ where: { studentId, semesterId: { in: semesterIds } }, include: { subject: true } });
-    const totalEarned = gradeEntries.reduce((sum, g) => sum + (g.pointsEarned || 0), 0);
-    const totalPossible = gradeEntries.reduce((sum, g) => sum + (g.totalPoints || 0), 0);
-    const overallAvg = totalPossible > 0 ? (totalEarned / totalPossible) * 100 : 0;
+  const semesterIds = semestersInYear.map((s: any) => s.id);
+  const gradeEntries = await prisma.gradeEntry.findMany({ where: { studentId, semesterId: { in: semesterIds } }, include: { subject: true } });
+  const totalEarned = gradeEntries.reduce((sum: number, g: any) => sum + (g.pointsEarned || 0), 0);
+  const totalPossible = gradeEntries.reduce((sum: number, g: any) => sum + (g.totalPoints || 0), 0);
+  const overallAvg = totalPossible > 0 ? (totalEarned / totalPossible) * 100 : 0;
 
-    const hasAnyFailed = gradeEntries.some(g => (g.pointsEarned || 0) < ((g.totalPoints || 0) * 0.5));
+  const hasAnyFailed = gradeEntries.some((g: any) => (g.pointsEarned || 0) < ((g.totalPoints || 0) * 0.5));
 
     // 5. Check requirements using academic-year-wide averages
     if (typeof minAverage === 'number' && overallAvg < minAverage) {
