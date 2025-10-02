@@ -36,7 +36,7 @@ export const Header = () => {
   }, []);
 
   return (
-    <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+    <header style={{ left: 'var(--sidebar-width, 16rem)' }} className="fixed top-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 border-b border-gray-200 dark:border-gray-800 px-6 py-4 backdrop-blur-sm">
       <div className="flex items-center justify-between">
         {/* Logo */}
   <img src="/logo.png" alt="SMIS Logo" className="h-10 w-10 rounded-full object-cover mr-6" />
