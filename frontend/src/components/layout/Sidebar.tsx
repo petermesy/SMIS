@@ -18,6 +18,7 @@ import {
   ChevronRight,
   LogOut
 } from 'lucide-react';
+import RegistrationSidebar from '@/components/layout/RegistrationSidebar';
 
 const navigationItems = {
   admin: [
@@ -48,6 +49,7 @@ const navigationItems = {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'My Schedule', href: '/schedule', icon: Calendar },
     { name: 'Attendance', href: '/attendance', icon: ClipboardList },
+    { name: 'Registration', href: '/registration', icon: GraduationCap },
     { name: 'Grades', href: '/grades', icon: BookOpen },
     { name: 'Messages', href: '/messages', icon: MessageCircle },
     { name: 'Resources', href: '/resources', icon: FileText },
@@ -120,8 +122,10 @@ export const Sidebar = () => {
         })}
       </nav>
 
-      {/* User Profile & Logout */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+  {/* Registration widget for students */}
+
+  {/* User Profile & Logout */}
+  <div className="p-4 border-t border-gray-200 dark:border-gray-800">
         {!collapsed && (
           <div className="flex items-center space-x-3 mb-3">
             <div className="w-8 h-8 bg-blue-600 dark:bg-blue-400 rounded-full flex items-center justify-center">

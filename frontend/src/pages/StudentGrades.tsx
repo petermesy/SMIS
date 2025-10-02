@@ -317,8 +317,8 @@ const handleRegisterNext = async () => {
         <div className="mt-4 p-3 border rounded bg-gray-50">
           <div className="font-medium">Registration eligibility</div>
           <div>Eligible: <strong>{eligible ? 'Yes' : 'No'}</strong></div>
-          <div>English average: <strong>{eligibilityAverages.English ? eligibilityAverages.English.toFixed(2) + '%' : 'N/A'}</strong></div>
-          <div>Maths average: <strong>{eligibilityAverages.Maths ? eligibilityAverages.Maths.toFixed(2) + '%' : 'N/A'}</strong></div>
+          <div>English average: <strong>{eligibilityAverages.English !== undefined ? eligibilityAverages.English.toFixed(2) + '%' : 'N/A'}</strong></div>
+          <div>Maths average: <strong>{eligibilityAverages.Maths !== undefined ? eligibilityAverages.Maths.toFixed(2) + '%' : 'N/A'}</strong></div>
           {eligibilityReason && <div className="text-sm text-red-600">Reason: {eligibilityReason}</div>}
         </div>
       )}

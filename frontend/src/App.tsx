@@ -25,6 +25,7 @@ import Dashboard from "@/pages/Dashboard";
 import UserManagement from "@/pages/UserManagement";
 import { ClassScheduling } from "@/pages/ClassScheduling";
 import ClassAssignment from "@/pages/ClassAssignment";
+import Registration from "@/pages/Registration";
 // Removed duplicate AppRoutes definition. Only one AppRoutes function should exist below with all routes.
 
 import { AttendanceManagement } from "@/pages/AttendanceManagement";
@@ -117,6 +118,11 @@ function AppRoutes() {
       <Route path="/schedule" element={
         <ProtectedRoute>
           <ClassScheduling />
+        </ProtectedRoute>
+      } />
+      <Route path="/registration" element={
+        <ProtectedRoute>
+          <Registration />
         </ProtectedRoute>
       } />
       <Route path="/class-assignment" element={
