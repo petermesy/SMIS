@@ -261,10 +261,10 @@ const handleRegisterNext = async () => {
       </Card>
       {/* Registration Button */}
 
-{user?.role === 'student' && eligibilityChecked && registrationOpen && (
+  {user?.role === 'student' && eligibilityChecked && registrationOpen && (
   <div className="mt-6 flex flex-col items-center w-full">
     {/* Banner showing registration is open for this semester/academic year */}
-    <div className="w-full mb-3 p-3 rounded bg-green-100 border border-green-200 text-green-800">
+    {/* <div className="w-full mb-3 p-3 rounded bg-green-100 border border-green-200 text-green-800">
       {openSemesterId ? (
         <div>
           Registration is OPEN for <strong>{semesterMap[openSemesterId] || openSemesterId}</strong>
@@ -283,10 +283,10 @@ const handleRegisterNext = async () => {
       ) : (
         <div>Registration is currently open.</div>
       )}
-    </div>
+    </div> */}
 
     {/* If eligible, show actionable register button. If not, show clear ineligibility message with averages. */}
-    {eligible ? (
+    {/* {eligible ? (
       <div>
         <button
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
@@ -308,12 +308,12 @@ const handleRegisterNext = async () => {
         <div className="mt-2">To be eligible you must have both English and Maths averages at or above 50% across the academic year.</div>
         {eligibilityReason && <div className="mt-2 text-sm text-red-600">Reason: {eligibilityReason}</div>}
       </div>
-    )}
+    )} */}
   </div>
 )}
      
       {/* Eligibility details */}
-      {user?.role === 'student' && eligibilityChecked && (
+      {/* {user?.role === 'student' && eligibilityChecked && (
         <div className="mt-4 p-3 border rounded bg-gray-50">
           <div className="font-medium">Registration eligibility</div>
           <div>Eligible: <strong>{eligible ? 'Yes' : 'No'}</strong></div>
@@ -321,7 +321,7 @@ const handleRegisterNext = async () => {
           <div>Maths average: <strong>{eligibilityAverages.Maths !== undefined ? eligibilityAverages.Maths.toFixed(2) + '%' : 'N/A'}</strong></div>
           {eligibilityReason && <div className="text-sm text-red-600">Reason: {eligibilityReason}</div>}
         </div>
-      )}
+      )} */}
     </div>
   );
 }
