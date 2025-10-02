@@ -91,7 +91,7 @@ export const AddClassSection = () => {
                   <SelectValue placeholder="Select grade" />
                 </SelectTrigger>
                 <SelectContent>
-                  {grades.length === 0 && <SelectItem value="" disabled>No grades found</SelectItem>}
+                  {grades.length === 0 && <SelectItem value="__no_grades" disabled>No grades found</SelectItem>}
                   {grades.map(grade => (
                     <SelectItem key={grade.id} value={grade.id}>
                       {grade.name} {grade.level ? `(Level ${grade.level})` : ''}
@@ -107,7 +107,7 @@ export const AddClassSection = () => {
                   <SelectValue placeholder="Select academic year" />
                 </SelectTrigger>
                 <SelectContent>
-                  {academicYears.length === 0 && <SelectItem value="" disabled>No academic years found</SelectItem>}
+                  {academicYears.length === 0 && <SelectItem value="__no_academic_years" disabled>No academic years found</SelectItem>}
                   {academicYears.map(year => (
                     <SelectItem key={year.id} value={year.id}>{year.name}</SelectItem>
                   ))}

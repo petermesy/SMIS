@@ -25,7 +25,18 @@ export default function ClassAssignment() {
   const [selectedSemester, setSelectedSemester] = useState('');
 
   useEffect(() => {
-    getClasses().then(setClasses);
+    // Fetch classes (be defensive: backend might return { classes: [] } or [] )
+    getClasses()
+      .then((res) => {
+        // res might already be an array (due to getClasses normalization), but ensure we set an array
+        const list = Array.isArray(res) ? res : res?.classes || [];
+        console.log('Loaded classes:', list);
+        setClasses(list);
+      })
+      .catch((err) => {
+        console.error('Failed to load classes:', err);
+        setClasses([]);
+      });
     getUsers({ role: 'TEACHER' }).then(res => setTeachers(res.users || []));
     getUsers({ role: 'STUDENT' }).then(res => setStudents(res.users || []));
     getSubjects().then(setSubjects);
@@ -93,16 +104,20 @@ export default function ClassAssignment() {
           <CardTitle>Assign Teacher to Class</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Select value={selectedClass} onValueChange={setSelectedClass}>
+          <Select value={selectedClass} onValueChange={setSelectedClass} disabled={!classes.length}>
             <SelectTrigger>
               <SelectValue placeholder="Select Class" />
             </SelectTrigger>
             <SelectContent>
-              {classes.map(cls => (
-                <SelectItem key={cls.id} value={cls.id}>
-                  {cls.grade?.name} {cls.classSection?.name}
-                </SelectItem>
-              ))}
+              {classes.length ? (
+                classes.map(cls => (
+                  <SelectItem key={cls.id} value={cls.id}>
+                    {cls.grade?.name} {cls.classSection?.name}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="__no_classes" disabled>No classes available</SelectItem>
+              )}
             </SelectContent>
           </Select>
           <Select value={selectedTeacher} onValueChange={setSelectedTeacher}>
@@ -145,16 +160,20 @@ export default function ClassAssignment() {
           <CardTitle>Assign Student to Class</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-                <Select value={selectedClass} onValueChange={setSelectedClass}>
+                <Select value={selectedClass} onValueChange={setSelectedClass} disabled={!classes.length}>
         <SelectTrigger>
           <SelectValue placeholder="Select Class" />
         </SelectTrigger>
         <SelectContent>
-          {classes.map(cls => (
-            <SelectItem key={cls.id} value={cls.id}>
-              {cls.grade?.name} {cls.classSection?.name}
-            </SelectItem>
-          ))}
+          {classes.length ? (
+            classes.map(cls => (
+              <SelectItem key={cls.id} value={cls.id}>
+                {cls.grade?.name} {cls.classSection?.name}
+              </SelectItem>
+            ))
+          ) : (
+            <SelectItem value="__no_classes" disabled>No classes available</SelectItem>
+          )}
         </SelectContent>
       </Select>
           <Select value={selectedStudent} onValueChange={setSelectedStudent}>

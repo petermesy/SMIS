@@ -112,7 +112,9 @@ export async function createGradeCategory(data: any) {
 // Get all classes
 export async function getClasses() {
   const res = await api.get('/classes');
-  return res.data;
+  // Some endpoints/servers return { classes: [...] } while others return the array directly.
+  // Be tolerant and return whichever shape is present.
+  return res.data?.classes || res.data;
 }
 // Assign a teacher to a class
 export async function assignTeacherToClass(
