@@ -30,6 +30,7 @@ export default function StudentGrades() {
   const [openSemesterId, setOpenSemesterId] = useState<string | null>(null);
   const [semestersList, setSemestersList] = useState<any[]>([]);
   const [openSemesterAcademicYearId, setOpenSemesterAcademicYearId] = useState<string | null>(null);
+  const [currentEnrollment, setCurrentEnrollment] = useState<any | null>(null);
 
   useEffect(() => {
     // Fetch eligibility for registration
@@ -40,6 +41,7 @@ export default function StudentGrades() {
         setEligible(res.data.eligible);
         setRegistrationOpen(!!res.data.openSemesterId);
         setOpenSemesterId(res.data.openSemesterId || null);
+        if (res.data.currentEnrollment) setCurrentEnrollment(res.data.currentEnrollment);
         if (res.data.previousAcademicYearId) setOpenSemesterAcademicYearId(res.data.previousAcademicYearId);
         if (res.data.averages) setEligibilityAverages(res.data.averages);
         if (res.data.reason) setEligibilityReason(res.data.reason);
@@ -67,14 +69,16 @@ export default function StudentGrades() {
 
 
 const handleRegisterNext = async () => {
-  if (!selectedSemester) {
-    setRegisterMessage('Please select a semester.');
+  // If student didn't pick a semester, default to the open semester provided by the backend
+  const semesterToUse = selectedSemester || openSemesterId;
+  if (!semesterToUse) {
+    setRegisterMessage('No open semester available to register for.');
     return;
   }
   setRegistering(true);
   setRegisterMessage('');
   try {
-    await registerNextSemester(selectedSemester);
+    await registerNextSemester(semesterToUse);
     setRegisterMessage('Registration request submitted! Awaiting admin approval.');
   } catch (err: any) {
     setRegisterMessage(
@@ -289,6 +293,18 @@ const handleRegisterNext = async () => {
     )}
   </div>
 )}
+      {/* Current Enrollment Summary */}
+      {currentEnrollment && (
+        <div className="mt-4 p-3 border rounded bg-white shadow-sm max-w-md">
+          <div className="font-semibold">Current Enrollment</div>
+          <div className="mt-1">
+            {currentEnrollment.gradeName || `Grade ${currentEnrollment.gradeLevel}`} {currentEnrollment.section ? ` ${currentEnrollment.section}` : ''}
+          </div>
+          <div className="text-sm text-gray-600 mt-1">
+            Academic year: {currentEnrollment.academicYearId && academicYearMap[currentEnrollment.academicYearId] ? academicYearMap[currentEnrollment.academicYearId] : currentEnrollment.academicYearId}
+          </div>
+        </div>
+      )}
       {/* Eligibility details */}
       {user?.role === 'student' && eligibilityChecked && (
         <div className="mt-4 p-3 border rounded bg-gray-50">

@@ -8,45 +8,43 @@ export const getRegistrationEligibility = async (req: Request, res: Response) =>
   try {
     const studentId = (req as any).user?.id;
     if (!studentId) return res.status(401).json({ error: 'Unauthorized' });
-
     // Find the semester where registration is open (the next semester)
     const openSemester = await prisma.semester.findFirst({
       where: { registrationOpen: true },
       orderBy: { startDate: 'desc' },
     });
     if (!openSemester) return res.json({ eligible: false, reason: 'Registration not open' });
-
-    // Find the previous semester (the most recent semester before the open one)
-    let previousSemester = await prisma.semester.findFirst({
-      where: {
-        startDate: { lt: openSemester.startDate },
-        academicYearId: openSemester.academicYearId,
-      },
-      orderBy: { startDate: 'desc' },
+    // Determine the student's latest enrollment academic year (this is the "current" academic year
+    // we should evaluate across both semesters for promotion). Include class/grade/section to return to frontend.
+    const latestEnrollment = await prisma.studentEnrollment.findFirst({
+      where: { studentId },
+      orderBy: { enrollmentDate: 'desc' },
+      include: { semester: true, class: { include: { grade: true, classSection: true } } },
     });
+    if (!latestEnrollment) return res.json({ eligible: false, reason: 'No enrollment found for student' });
 
-    // If not found, look for the last semester of the previous academic year
-    if (!previousSemester) {
-      // Find previous academic year
-      const prevAcademicYear = await prisma.academicYear.findFirst({
-        where: { endDate: { lt: openSemester.startDate } },
-        orderBy: { endDate: 'desc' },
-      });
-      if (prevAcademicYear) {
-        previousSemester = await prisma.semester.findFirst({
-          where: {
-            academicYearId: prevAcademicYear.id,
-            startDate: { lt: openSemester.startDate },
-          },
-          orderBy: { startDate: 'desc' },
-        });
-      }
+    // If the open semester is in the same academic year as the student's latest enrollment,
+    // it's not a registration for a new academic year promotion — return info but mark not eligible for promotion.
+    if (openSemester.academicYearId === latestEnrollment.academicYearId) {
+      return res.json({ eligible: false, reason: 'Registration open for same academic year (not a promotion)', openSemesterId: openSemester.id });
     }
-    if (!previousSemester) return res.json({ eligible: false, reason: 'No previous semester found' });
 
-    // We need to check both semesters for the academic year that contains the previousSemester
-    const academicYearToCheckId = previousSemester.academicYearId;
+    const academicYearToCheckId = latestEnrollment.academicYearId;
     const averagesResult = await computeEnglishAndMathsAveragesForAcademicYear(studentId, academicYearToCheckId);
+
+    // Build a small summary of current enrollment for the frontend (grade name/level and section)
+    const currentEnrollmentSummary = latestEnrollment
+      ? {
+          classId: latestEnrollment.classId,
+          className: latestEnrollment.class?.name || null,
+          gradeId: latestEnrollment.class?.grade?.id || null,
+          gradeName: latestEnrollment.class?.grade?.name || null,
+          gradeLevel: latestEnrollment.class?.grade?.level || null,
+          section: latestEnrollment.class?.classSection?.name || null,
+          academicYearId: latestEnrollment.academicYearId,
+          semesterId: latestEnrollment.semesterId || null,
+        }
+      : null;
 
     res.json({
       eligible: averagesResult.eligible,
@@ -54,6 +52,7 @@ export const getRegistrationEligibility = async (req: Request, res: Response) =>
       previousAcademicYearId: academicYearToCheckId,
       openSemesterId: openSemester.id,
       reason: averagesResult.reason,
+      currentEnrollment: currentEnrollmentSummary,
     });
   } catch (err) {
     res.status(500).json({ error: 'Failed to check eligibility' });
@@ -129,18 +128,33 @@ export const registerNextSemester = async (req: Request, res: Response, next: Ne
     // 3. Get requirements from next semester
     const { minAverage, noFailedSubjects } = nextSemester;
 
-    // 4. Get student stats for current semester
-    const { avg, hasFailed } = await getStudentSemesterStats(studentId, currentSemesterId);
+  // 4. For promotion we need to evaluate the student's performance across the entire current academic year
+  // Find the student's latest enrollment academic year and the semesters that belong to it
+  const enrollmentForYear = await prisma.studentEnrollment.findFirst({ where: { studentId }, orderBy: { enrollmentDate: 'desc' }, include: { semester: true, class: true } });
+  if (!enrollmentForYear) return res.status(404).json({ error: 'No current enrollment found for student' });
 
-    // 5. Check requirements
-    if (typeof minAverage === 'number' && avg < minAverage) {
-      return res.status(403).json({ error: `Minimum average required: ${minAverage}` });
-    }
-    if (noFailedSubjects && hasFailed) {
-      return res.status(403).json({ error: 'You have failed subjects and cannot register.' });
+  const academicYearIdToCheck = enrollmentForYear.academicYearId;
+    const semestersInYear = await prisma.semester.findMany({ where: { academicYearId: academicYearIdToCheck }, orderBy: { startDate: 'asc' } });
+    if (!semestersInYear || semestersInYear.length === 0) {
+      return res.status(400).json({ error: 'Academic year has no semesters to evaluate' });
     }
 
-    // 6. Get latest enrollment for classId and academicYearId
+    const semesterIds = semestersInYear.map(s => s.id);
+    const gradeEntries = await prisma.gradeEntry.findMany({ where: { studentId, semesterId: { in: semesterIds } }, include: { subject: true } });
+    const totalEarned = gradeEntries.reduce((sum, g) => sum + (g.pointsEarned || 0), 0);
+    const totalPossible = gradeEntries.reduce((sum, g) => sum + (g.totalPoints || 0), 0);
+    const overallAvg = totalPossible > 0 ? (totalEarned / totalPossible) * 100 : 0;
+
+    const hasAnyFailed = gradeEntries.some(g => (g.pointsEarned || 0) < ((g.totalPoints || 0) * 0.5));
+
+    // 5. Check requirements using academic-year-wide averages
+    if (typeof minAverage === 'number' && overallAvg < minAverage) {
+      return res.status(403).json({ error: `Minimum average required across academic year: ${minAverage}` });
+    }
+    if (noFailedSubjects && hasAnyFailed) {
+      return res.status(403).json({ error: 'You have failed subjects in the academic year and cannot register.' });
+    }
+    // 6. Get latest enrollment for classId and academicYearId (the student's current class/section info)
     const latestEnrollment = await prisma.studentEnrollment.findFirst({
       where: {
         studentId,
@@ -159,10 +173,10 @@ export const registerNextSemester = async (req: Request, res: Response, next: Ne
     // If academic year changes, promote student to next grade/class
     if (nextSemester.academicYearId !== latestEnrollment.academicYearId) {
       // Before promoting across academic years, ensure student meets English & Maths both-semester averages >= 50%
-        const eligibility = await computeEnglishAndMathsAveragesForAcademicYear(studentId, latestEnrollment.academicYearId);
-        if (!eligibility.eligible) {
-          return res.status(403).json({ error: 'Student does not meet promotion requirements', details: { English: eligibility.englishPercent, Maths: eligibility.mathsPercent, reason: eligibility.reason } });
-        }
+      const eligibility = await computeEnglishAndMathsAveragesForAcademicYear(studentId, enrollmentForYear.academicYearId);
+      if (!eligibility.eligible) {
+        return res.status(403).json({ error: 'Student does not meet promotion requirements', details: { English: eligibility.englishPercent, Maths: eligibility.mathsPercent, reason: eligibility.reason } });
+      }
       const currentGradeLevel = latestEnrollment.class.grade.level;
       const nextGrade = await prisma.grade.findFirst({ where: { level: currentGradeLevel + 1 } });
       if (!nextGrade) {

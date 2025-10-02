@@ -78,6 +78,24 @@ export const approveRegistrationRequest = async (req: Request, res: Response) =>
     let newClassId = latestEnrollment.classId;
     let newAcademicYearId = latestEnrollment.academicYearId;
 
+    // Enforce minAverage / noFailedSubjects rules from the target semester across the student's current academic year
+    if (typeof targetSemester.minAverage === 'number' || targetSemester.noFailedSubjects) {
+      const academicYearIdToCheck = latestEnrollment.academicYearId;
+      const semestersInYear = await prisma.semester.findMany({ where: { academicYearId: academicYearIdToCheck }, orderBy: { startDate: 'asc' } });
+      const semesterIds = semestersInYear.map(s => s.id);
+      const gradeEntries = await prisma.gradeEntry.findMany({ where: { studentId: request.studentId, semesterId: { in: semesterIds } } });
+      const totalEarned = gradeEntries.reduce((sum, g) => sum + (g.pointsEarned || 0), 0);
+      const totalPossible = gradeEntries.reduce((sum, g) => sum + (g.totalPoints || 0), 0);
+      const overallAvg = totalPossible > 0 ? (totalEarned / totalPossible) * 100 : 0;
+      const hasAnyFailed = gradeEntries.some(g => (g.pointsEarned || 0) < ((g.totalPoints || 0) * 0.5));
+      if (typeof targetSemester.minAverage === 'number' && overallAvg < targetSemester.minAverage) {
+        return res.status(403).json({ error: `Student does not meet minimum average requirement: ${targetSemester.minAverage}` });
+      }
+      if (targetSemester.noFailedSubjects && hasAnyFailed) {
+        return res.status(403).json({ error: 'Student has failed subjects in the academic year and cannot be approved.' });
+      }
+    }
+
     // If academic year changes, promote student to next grade/class
     if (targetSemester.academicYearId !== latestEnrollment.academicYearId) {
       // Ensure student meets promotion requirements (English & Maths averages >= 50% across the academic year)
