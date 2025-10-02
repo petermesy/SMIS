@@ -73,19 +73,22 @@ export const Sidebar = () => {
   const userNavItems = navigationItems[user.role] || [];
 
   return (
-    <div className={cn(
-      "bg-white dark:bg-[hsl(var(--sidebar-background))] border-r border-gray-200 dark:border-gray-800 transition-all duration-300 flex flex-col",
-      collapsed ? "w-16" : "w-64"
-    )}>
+    <>
+      <div className={cn(
+        "fixed left-0 top-0 bottom-0 h-screen bg-[#0b0b0f] dark:bg-[#0b0b0f] shadow-[0_8px_20px_rgba(2,6,23,0.45)] text-white border-transparent transition-all duration-300 flex flex-col overflow-hidden z-40",
+        collapsed ? "w-16" : "w-64"
+      )}>
+      {/* thin right-edge gradient to separate the sidebar from content */}
+      <div className="absolute right-0 top-0 bottom-0 w-px bg-gradient-to-b from-[rgba(255,255,255,0.06)] via-transparent to-[rgba(0,0,0,0.12)] pointer-events-none" aria-hidden="true" />
       {/* Header */}
-      <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+  <div className="sticky top-0 z-50 p-4 border-b border-transparent shadow-[0_4px_8px_rgba(0,0,0,0.28)] bg-[#0b0b0f]">
         <div className="flex items-center justify-between">
           {!collapsed && (
             <div className="flex items-center space-x-2">
               <img src="/logo.png" alt="School Logo" className="w-8 h-8 rounded-full object-cover" />
               <div className="text-sm">
-                <p className="font-semibold text-gray-900 dark:text-gray-100">SSPS</p>
-                <p className="text-gray-600 dark:text-gray-400">SMIS</p>
+                <p className="font-semibold text-white">SSPS</p>
+                <p className="text-white/80">SMIS</p>
               </div>
             </div>
           )}
@@ -101,7 +104,7 @@ export const Sidebar = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
+  <nav className="flex-1 p-4 space-y-1 overflow-hidden">
         {userNavItems.map((item) => {
           const isActive = location.pathname === item.href;
           return (
@@ -111,11 +114,11 @@ export const Sidebar = () => {
               className={cn(
                 "flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors",
                 isActive
-                  ? "bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200"
-                  : "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+                  ? "bg-blue-800 text-white"
+                  : "text-white/90 hover:bg-white/5 hover:text-white"
               )}
             >
-              <item.icon className={cn("flex-shrink-0", collapsed ? "w-5 h-5" : "w-5 h-5 mr-3") + " dark:text-blue-300"} />
+              <item.icon className={cn("flex-shrink-0", collapsed ? "w-5 h-5" : "w-5 h-5 mr-3") + " text-white/80"} />
               {!collapsed && <span>{item.name}</span>}
             </NavLink>
           );
@@ -125,7 +128,7 @@ export const Sidebar = () => {
   {/* Registration widget for students */}
 
   {/* User Profile & Logout */}
-  <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+  <div className="p-4 border-t border-transparent">
         {!collapsed && (
           <div className="flex items-center space-x-3 mb-3">
             <div className="w-8 h-8 bg-blue-600 dark:bg-blue-400 rounded-full flex items-center justify-center">
@@ -134,10 +137,10 @@ export const Sidebar = () => {
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+              <p className="text-sm font-medium text-white truncate">
                 {user.firstName || ''} {user.lastName || ''}
               </p>
-              <p className="text-xs text-gray-600 dark:text-gray-400 capitalize">
+              <p className="text-xs text-white/75 capitalize">
                 {user.role}
               </p>
             </div>
@@ -147,14 +150,17 @@ export const Sidebar = () => {
           variant="ghost"
           onClick={logout}
           className={cn(
-            "w-full justify-start text-gray-700 dark:text-gray-200 hover:bg-red-50 dark:hover:bg-red-900 hover:text-red-700 dark:hover:text-red-400",
+            "w-full justify-start text-white hover:bg-red-700/20 hover:text-white",
             collapsed && "justify-center px-2"
           )}
         >
-          <LogOut className={cn("w-5 h-5", !collapsed && "mr-3") + " dark:text-red-400"} />
+          <LogOut className={cn("w-5 h-5", !collapsed && "mr-3") + " text-red-300"} />
           {!collapsed && <span>Logout</span>}
         </Button>
       </div>
-    </div>
+      </div>
+      {/* spacer to push main content to the right so fixed sidebar doesn't cover it */}
+      <div aria-hidden="true" className={cn(collapsed ? "w-16 flex-shrink-0" : "w-64 flex-shrink-0")} />
+    </>
   );
 };
