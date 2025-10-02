@@ -23,15 +23,6 @@ export const getRegistrationEligibility = async (req: Request, res: Response) =>
     });
     if (!latestEnrollment) return res.json({ eligible: false, reason: 'No enrollment found for student' });
 
-    // If the open semester is in the same academic year as the student's latest enrollment,
-    // it's not a registration for a new academic year promotion — return info but mark not eligible for promotion.
-    if (openSemester.academicYearId === latestEnrollment.academicYearId) {
-      return res.json({ eligible: false, reason: 'Registration open for same academic year (not a promotion)', openSemesterId: openSemester.id });
-    }
-
-    const academicYearToCheckId = latestEnrollment.academicYearId;
-    const averagesResult = await computeEnglishAndMathsAveragesForAcademicYear(studentId, academicYearToCheckId);
-
     // Build a small summary of current enrollment for the frontend (grade name/level and section)
     const currentEnrollmentSummary = latestEnrollment
       ? {
@@ -46,6 +37,15 @@ export const getRegistrationEligibility = async (req: Request, res: Response) =>
           semesterName: latestEnrollment.semester?.name || null,
         }
       : null;
+
+    // If the open semester is in the same academic year as the student's latest enrollment,
+    // it's not a registration for a new academic year promotion — return info but mark not eligible for promotion.
+    if (openSemester.academicYearId === latestEnrollment.academicYearId) {
+      return res.json({ eligible: false, reason: 'Registration open for same academic year (not a promotion)', openSemesterId: openSemester.id, currentEnrollment: currentEnrollmentSummary });
+    }
+
+    const academicYearToCheckId = latestEnrollment.academicYearId;
+    const averagesResult = await computeEnglishAndMathsAveragesForAcademicYear(studentId, academicYearToCheckId);
 
     res.json({
       eligible: averagesResult.eligible,

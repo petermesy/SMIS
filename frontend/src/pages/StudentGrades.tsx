@@ -33,7 +33,9 @@ export default function StudentGrades() {
   const [currentEnrollment, setCurrentEnrollment] = useState<any | null>(null);
 
   useEffect(() => {
-    // Fetch eligibility for registration
+    // Fetch eligibility for registration. If the student has just been approved by an admin
+    // there may be a small delay before the new StudentEnrollment appears. Poll briefly
+    // until currentEnrollment is available so the dashboard updates without a full page refresh.
     const checkEligibility = async () => {
       try {
         const res = await api.get('/students/registration-eligibility');
@@ -45,13 +47,57 @@ export default function StudentGrades() {
         if (res.data.previousAcademicYearId) setOpenSemesterAcademicYearId(res.data.previousAcademicYearId);
         if (res.data.averages) setEligibilityAverages(res.data.averages);
         if (res.data.reason) setEligibilityReason(res.data.reason);
+        return res.data;
       } catch (err) {
         console.log('Eligibility API error:', err);
         setEligible(false);
+        return null;
       }
-      setEligibilityChecked(true);
     };
-    checkEligibility();
+
+    let polling = true;
+    let pollHandle: any = null;
+    const start = async () => {
+      const first = await checkEligibility();
+      setEligibilityChecked(true);
+      // If there's no currentEnrollment yet, poll for a short period (30s) until it appears
+      if (first && !first.currentEnrollment) {
+        let attempts = 0;
+        pollHandle = setInterval(async () => {
+          attempts += 1;
+          try {
+            const r = await api.get('/students/registration-eligibility');
+            if (r.data) {
+              setEligible(r.data.eligible);
+              setRegistrationOpen(!!r.data.openSemesterId);
+              setOpenSemesterId(r.data.openSemesterId || null);
+              if (r.data.currentEnrollment) {
+                setCurrentEnrollment(r.data.currentEnrollment);
+              }
+              if (r.data.averages) setEligibilityAverages(r.data.averages);
+              if (r.data.reason) setEligibilityReason(r.data.reason);
+            }
+            // Stop polling if we found currentEnrollment or after ~6 attempts (~30s)
+            if (r.data?.currentEnrollment || attempts >= 6) {
+              clearInterval(pollHandle);
+              polling = false;
+            }
+          } catch (e) {
+            // ignore and continue polling
+            if (attempts >= 6) {
+              clearInterval(pollHandle);
+              polling = false;
+            }
+          }
+        }, 5000);
+      }
+    };
+    start();
+
+    return () => {
+      polling = false;
+      if (pollHandle) clearInterval(pollHandle);
+    };
   }, []);
 
   // Fetch full semesters so we can show the academic year for the open semester
