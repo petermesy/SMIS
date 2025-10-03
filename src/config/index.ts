@@ -9,6 +9,7 @@ export const config = {
   rateLimitWindow: parseInt(process.env.RATE_LIMIT_WINDOW || '15'),
   rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX || '100'),
   uploadDir: process.env.UPLOAD_DIR || 'uploads',
+  auditEnabled: (process.env.AUDIT_ENABLED || 'true') === 'true',
 };
 
 

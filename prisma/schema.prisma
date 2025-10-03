@@ -54,6 +54,7 @@ model StudentHistory {
 }
 
 enum Role {
+  SUPERADMIN
   ADMIN
   TEACHER
   STUDENT
@@ -371,4 +372,19 @@ model StudentRegistrationRequest {
 
   student  User     @relation(fields: [studentId], references: [id])
   semester Semester @relation(fields: [semesterId], references: [id])
+}
+
+// Audit logs for administrative actions (written when SUPERADMIN performs actions)
+model AuditLog {
+  id         String   @id @default(uuid())
+  actorId    String?  // string id of the actor (do not create relation to avoid schema changes on User)
+  actorRole  Role?
+  route      String
+  method     String
+  status     Int?
+  params     Json?
+  body       Json?
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
 }

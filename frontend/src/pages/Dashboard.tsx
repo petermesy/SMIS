@@ -220,8 +220,10 @@ const Dashboard = () => {
   const { user } = useAuth();
 
   const renderDashboard = () => {
-    switch (user?.role) {
+    const role = (user?.role || '').toString().toLowerCase();
+    switch (role) {
       case 'admin':
+      case 'superadmin': // allow superadmin to see admin dashboard
         return <AdminDashboard />;
       case 'teacher':
         return <TeacherDashboardWrapper />;

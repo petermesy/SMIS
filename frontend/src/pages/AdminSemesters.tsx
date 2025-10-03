@@ -3,6 +3,7 @@ import { getSemesters } from '@/lib/api';
 import { api } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { toast } from 'sonner';
 
 export default function AdminSemesters() {
   const { user } = useAuth();
@@ -24,7 +25,7 @@ export default function AdminSemesters() {
   await api.patch(`/semesters/${semesterId}/registration`, { registrationOpen: !currentValue });
       setSemesters(semesters => semesters.map(s => s.id === semesterId ? { ...s, registrationOpen: !currentValue } : s));
     } catch (err) {
-      alert('Failed to update registration status');
+      toast.error('Failed to update registration status');
     } finally {
       setUpdating(null);
     }

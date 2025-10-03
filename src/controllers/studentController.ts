@@ -14,6 +14,7 @@ export const getRegistrationEligibility = async (req: Request, res: Response) =>
       orderBy: { startDate: 'desc' },
     });
     if (!openSemester) return res.json({ eligible: false, reason: 'Registration not open' });
+    console.log('getRegistrationEligibility: studentId=', studentId, 'openSemester=', openSemester?.id);
     // Determine the student's latest enrollment academic year (this is the "current" academic year
     // we should evaluate across both semesters for promotion). Include class/grade/section to return to frontend.
     const latestEnrollment = await prisma.studentEnrollment.findFirst({
@@ -21,7 +22,14 @@ export const getRegistrationEligibility = async (req: Request, res: Response) =>
       orderBy: { enrollmentDate: 'desc' },
       include: { semester: true, class: { include: { grade: true, classSection: true } } },
     });
-    if (!latestEnrollment) return res.json({ eligible: false, reason: 'No enrollment found for student' });
+    if (!latestEnrollment) {
+      // Try to surface any enrollments for debugging (maybe different semester/shape)
+      const rawEnrollments = await prisma.studentEnrollment.findMany({ where: { studentId }, include: { class: true, semester: true, academicYear: true } });
+      console.warn('getRegistrationEligibility: no latestEnrollment found for', studentId, 'rawEnrollments.count=', rawEnrollments.length);
+      return res.json({ eligible: false, reason: 'No enrollment found for student', enrollments: rawEnrollments });
+    }
+
+    console.log('getRegistrationEligibility: latestEnrollment id=', latestEnrollment.id, 'classId=', latestEnrollment.classId, 'academicYearId=', latestEnrollment.academicYearId);
 
     // Build a small summary of current enrollment for the frontend (grade name/level and section)
     const currentEnrollmentSummary = latestEnrollment

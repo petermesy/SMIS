@@ -23,31 +23,36 @@ const loginValidation = [
 
 // POST /api/auth/login
 router.post('/login', loginValidation, async (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user || user.status !== 'ACTIVE') {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        status: user.status,
+      },
+      config.jwtSecret,
+      { expiresIn: '8h' }
+    );
+    res.json({ token });
+  } catch (err) {
+    console.error('Error in POST /api/auth/login:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
-  const user = await prisma.user.findUnique({ where: { email } });
-  if (!user || user.status !== 'ACTIVE') {
-    return res.status(401).json({ error: 'Invalid credentials' });
-  }
-  const valid = await bcrypt.compare(password, user.passwordHash);
-  if (!valid) {
-    return res.status(401).json({ error: 'Invalid credentials' });
-  }
-  const token = jwt.sign(
-    {
-      id: user.id,
-      email: user.email,
-      role: user.role,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      status: user.status,
-    },
-    config.jwtSecret,
-    { expiresIn: '8h' }
-  );
-  res.json({ token });
 });
 
 // GET /api/auth/me

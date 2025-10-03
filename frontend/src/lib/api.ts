@@ -398,6 +398,27 @@ export async function setSemesterRegistrationOpen(semesterId: string, open: bool
   return res.data;
 }
 
+// Super Admin helpers
+export async function listAdmins() {
+  const res = await api.get('/super-admin/admins');
+  return res.data;
+}
+
+export async function setUserStatusApi(userId: string, status: 'ACTIVE'|'INACTIVE') {
+  const res = await api.post(`/super-admin/users/${userId}/status`, { status });
+  return res.data;
+}
+
+export async function changeUserRoleApi(userId: string, role: string) {
+  const res = await api.post(`/super-admin/users/${userId}/role`, { role });
+  return res.data;
+}
+
+export async function getAuditLogs(params?: { page?: number; pageSize?: number; actorId?: string; route?: string }) {
+  const res = await api.get('/super-admin/audit', { params });
+  return res.data;
+}
+
 // Student: Check if registration is open for next semester
 export async function getNextSemesterRegistrationStatus(studentId: string, currentSemesterId: string) {
   const res = await api.get(`/students/${studentId}/next-semester-registration-status`, { params: { currentSemesterId } });

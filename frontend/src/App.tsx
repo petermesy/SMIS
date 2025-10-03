@@ -41,6 +41,8 @@ import React, { Suspense } from "react";
 const TeacherClassManagement = React.lazy(() => import("./pages/TeacherClassManagement"));
 import TeacherDashboardAlt from "@/pages/TeacherDashboardAlt"; // Importing the new alternative dashboard component
 import AdminRegistrationRequests from "@/pages/AdminRegistrationRequests"; // <-- Add this import
+const SuperAdminPage = React.lazy(() => import('./pages/SuperAdmin'));
+const AuditLogsPage = React.lazy(() => import('./pages/AuditLogs'));
 
 // removed duplicate useAuth import
 
@@ -74,6 +76,14 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
       </div>
     </div>
   );
+};
+
+const RoleProtected = ({ children, role }: { children: React.ReactNode, role: string }) => {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>;
+  if (!user) return <Navigate to="/login" replace />;
+  if ((user.role || '').toString().toLowerCase() !== role.toLowerCase()) return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
 };
 
 const PublicRoute = ({ children }: { children: React.ReactNode }) => {
@@ -177,6 +187,24 @@ function AppRoutes() {
           <Suspense fallback={<div>Loading...</div>}>
             <ClassesRouteContent />
           </Suspense>
+        </ProtectedRoute>
+      } />
+      <Route path="/super-admin" element={
+        <ProtectedRoute>
+          <RoleProtected role="SUPERADMIN">
+            <Suspense fallback={<div>Loading Super Admin...</div>}>
+              <SuperAdminPage />
+            </Suspense>
+          </RoleProtected>
+        </ProtectedRoute>
+      } />
+      <Route path="/audit-logs" element={
+        <ProtectedRoute>
+          <RoleProtected role="SUPERADMIN">
+            <Suspense fallback={<div>Loading audit logs...</div>}>
+              <AuditLogsPage />
+            </Suspense>
+          </RoleProtected>
         </ProtectedRoute>
       } />
       <Route path="/messages" element={

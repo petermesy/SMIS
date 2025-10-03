@@ -22,6 +22,8 @@ import RegistrationSidebar from '@/components/layout/RegistrationSidebar';
 
 const navigationItems = {
   admin: [
+    { name: 'Super Admin', href: '/super-admin', icon: Users, requiredRole: 'SUPERADMIN' as const },
+    { name: 'Audit Logs', href: '/audit-logs', icon: ClipboardList, requiredRole: 'SUPERADMIN' as const },
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'User Management', href: '/users', icon: Users },
     { name: 'Class Assignment', href: '/class-assignment', icon: BookOpen },
@@ -70,7 +72,10 @@ export const Sidebar = () => {
 
   if (!user) return null;
 
-  const userNavItems = navigationItems[user.role] || [];
+  const roleKey = (user.role || '').toString().toLowerCase();
+  // Treat superadmin like admin for navigation and privileges
+  const mappedRoleKey = roleKey === 'superadmin' ? 'admin' : roleKey;
+  const userNavItems = navigationItems[mappedRoleKey] || [];
 
   return (
     <>
@@ -105,7 +110,19 @@ export const Sidebar = () => {
 
       {/* Navigation */}
   <nav className="flex-1 p-4 space-y-1 overflow-hidden">
-        {userNavItems.map((item) => {
+        {userNavItems
+          .filter(item => {
+            // If an item has no requiredRole, show it
+            if (!('requiredRole' in item)) return true;
+            const req = (item as any).requiredRole as string;
+            if (!req) return true;
+            // Allow SUPERADMIN to see items that require SUPERADMIN and also allow exact role matches
+            const userRoleLower = (user.role || '').toString().toLowerCase();
+            const reqLower = req.toLowerCase();
+            if (userRoleLower === 'superadmin' && reqLower === 'superadmin') return true;
+            return reqLower === userRoleLower;
+          })
+          .map((item) => {
           const isActive = location.pathname === item.href;
           return (
             <NavLink

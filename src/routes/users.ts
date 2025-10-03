@@ -2,7 +2,8 @@ import { bulkAssignStudentsToClass } from '../controllers/userController';
 
 import { Router, RequestHandler } from 'express';
 import multer from 'multer';
-import { authenticateJWT, requireRole, AuthRequest } from '../middlewares/auth';
+import { authenticateJWT, requireRole, requireSuperAdmin, AuthRequest } from '../middlewares/auth';
+import { Request, Response, NextFunction } from 'express';
 import { body, validationResult } from 'express-validator';
 import {
   listUsers,
@@ -57,7 +58,7 @@ const userValidation = [
   body('password').isLength({ min: 6 }).optional(),
   body('firstName').notEmpty().withMessage('First name is required'),
   body('lastName').notEmpty().withMessage('Last name is required'),
-  body('role').isIn(['ADMIN', 'TEACHER', 'STUDENT', 'PARENT']).withMessage('Valid role is required'),
+  body('role').isIn(['SUPERADMIN','ADMIN', 'TEACHER', 'STUDENT', 'PARENT']).withMessage('Valid role is required'),
   (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
@@ -79,7 +80,14 @@ router.get(
 router.post(
   '/',
   authenticateJWT,
-  requireRole('ADMIN'),
+  // allow ADMIN to create regular users, but only SUPERADMIN can create SUPERADMIN users
+  (req: Request, res: Response, next: NextFunction) => {
+    const desiredRole = (req.body && req.body.role) ? String(req.body.role).toUpperCase() : null;
+    if (desiredRole === 'SUPERADMIN') {
+      return requireSuperAdmin()(req as any, res as any, next as any);
+    }
+    return requireRole('ADMIN')(req as any, res as any, next as any);
+  },
   userValidation,
   createUser as RequestHandler
 );
@@ -96,7 +104,13 @@ router.get(
 router.put(
   '/:id',
   authenticateJWT,
-  requireRole('ADMIN'),
+  (req: Request, res: Response, next: NextFunction) => {
+    const desiredRole = (req.body && req.body.role) ? String(req.body.role).toUpperCase() : null;
+    if (desiredRole === 'SUPERADMIN') {
+      return requireSuperAdmin()(req as any, res as any, next as any);
+    }
+    return requireRole('ADMIN')(req as any, res as any, next as any);
+  },
   updateUser as RequestHandler
 );
 

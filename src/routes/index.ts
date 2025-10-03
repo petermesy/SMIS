@@ -17,6 +17,7 @@ import studentHistoryRoutes from './studentHistory';
 import studentRoutes from './students';
 import classSectionRoutes from './classSections';
 import studentRegistrationRequestRoutes from './studentRegistrationRequests';
+import superAdminRoutes from './superAdmin';
 
 const router = Router();
 
@@ -39,6 +40,7 @@ router.use('/students', studentRoutes);
 router.use('/class-sections', classSectionRoutes);
 router.use('/student-registration-requests', studentRegistrationRequestRoutes);
 router.use('/student-history', studentHistoryRoutes);
+router.use('/super-admin', superAdminRoutes);
 
 // ... add other route modules here
 
