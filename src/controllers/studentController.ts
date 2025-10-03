@@ -47,11 +47,10 @@ export const getRegistrationEligibility = async (req: Request, res: Response) =>
       : null;
 
     // If the open semester is in the same academic year as the student's latest enrollment,
-    // it's not a registration for a new academic year promotion — return info but mark not eligible for promotion.
-    if (openSemester.academicYearId === latestEnrollment.academicYearId) {
-      return res.json({ eligible: false, reason: 'Registration open for same academic year (not a promotion)', openSemesterId: openSemester.id, currentEnrollment: currentEnrollmentSummary });
-    }
-
+    // treat the latest enrollment in that academic year as the current enrollment and proceed
+    // to compute English/Maths averages across the available semesters in that year. This
+    // makes the eligibility check tolerant for registering into the next semester within
+    // the same academic year (e.g., moving from first to second semester).
     const academicYearToCheckId = latestEnrollment.academicYearId;
     const averagesResult = await computeEnglishAndMathsAveragesForAcademicYear(studentId, academicYearToCheckId);
 

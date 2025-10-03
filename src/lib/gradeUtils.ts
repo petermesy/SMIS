@@ -12,8 +12,8 @@ type EligibilityResult = {
 export async function computeEnglishAndMathsAveragesForAcademicYear(studentId: string, academicYearId: string): Promise<EligibilityResult> {
   // Find semesters for the academic year
   const semesters = await prisma.semester.findMany({ where: { academicYearId }, orderBy: { startDate: 'asc' } });
-  if (!semesters || semesters.length < 2) {
-    return { eligible: false, englishPercent: 0, mathsPercent: 0, reason: 'Academic year does not have two semesters' };
+  if (!semesters || semesters.length === 0) {
+    return { eligible: false, englishPercent: 0, mathsPercent: 0, reason: 'Academic year has no semesters' };
   }
   const semesterIds = semesters.map(s => s.id);
 

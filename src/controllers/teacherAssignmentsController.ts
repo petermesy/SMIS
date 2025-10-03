@@ -4,13 +4,23 @@ import { prisma } from '../lib/prisma';
 // Returns all classes and subjects assigned to the logged-in teacher
 export const getTeacherAssignments = async (req: Request, res: Response) => {
   try {
-    const teacherId = (req as any).user?.id;
-    if (!teacherId) {
-      return res.status(401).json({ error: 'Unauthorized' });
+    const user = (req as any).user || {};
+    const teacherId = user.id;
+    const role = (user.role || '').toString().toUpperCase();
+    const { academicYearId, semesterId } = req.query;
+
+    // If the requester is ADMIN or SUPERADMIN, allow fetching all assignments (optionally filtered)
+    const whereClause: any = {};
+    if (role !== 'ADMIN' && role !== 'SUPERADMIN') {
+      if (!teacherId) return res.status(401).json({ error: 'Unauthorized' });
+      whereClause.teacherId = teacherId;
     }
-    // Find all teacherSubject assignments for this teacher
+    if (academicYearId) whereClause.academicYearId = String(academicYearId);
+    if (semesterId) whereClause.semesterId = String(semesterId);
+
+    // Find teacherSubject assignments matching the whereClause
     const assignments = await prisma.teacherSubject.findMany({
-      where: { teacherId },
+      where: whereClause,
       include: {
         class: {
           include: {
@@ -29,6 +39,7 @@ export const getTeacherAssignments = async (req: Request, res: Response) => {
             semesters: true
           }
         },
+        teacher: true,
       },
     });
     res.json(assignments);

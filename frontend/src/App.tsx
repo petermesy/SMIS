@@ -43,6 +43,7 @@ import TeacherDashboardAlt from "@/pages/TeacherDashboardAlt"; // Importing the 
 import AdminRegistrationRequests from "@/pages/AdminRegistrationRequests"; // <-- Add this import
 const SuperAdminPage = React.lazy(() => import('./pages/SuperAdmin'));
 const AuditLogsPage = React.lazy(() => import('./pages/AuditLogs'));
+const AdminTeacherAssignments = React.lazy(() => import('./pages/AdminTeacherAssignments'));
 
 // removed duplicate useAuth import
 
@@ -165,6 +166,15 @@ function AppRoutes() {
        <Route path="/admin/semesters" element={
         <ProtectedRoute>
           <AdminSemesters />
+        </ProtectedRoute>
+      } />
+      <Route path="/admin/teacher-assignments" element={
+        <ProtectedRoute>
+          <RoleProtected role="ADMIN">
+            <React.Suspense fallback={<div>Loading...</div>}>
+              <AdminTeacherAssignments />
+            </React.Suspense>
+          </RoleProtected>
         </ProtectedRoute>
       } />
        <Route path="/admin/class-sections" element={

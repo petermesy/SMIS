@@ -27,6 +27,7 @@ const navigationItems = {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'User Management', href: '/users', icon: Users },
     { name: 'Class Assignment', href: '/class-assignment', icon: BookOpen },
+  { name: 'Teacher Assignments', href: '/admin/teacher-assignments', icon: Users, requiredRole: 'ADMIN' as const },
     { name: 'Class Scheduling', href: '/schedule', icon: Calendar },
     { name: 'Attendance', href: '/attendance', icon: ClipboardList },
     { name: 'Academic Management', href: '/academics', icon: BookOpen },

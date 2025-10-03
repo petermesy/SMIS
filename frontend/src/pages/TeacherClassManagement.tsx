@@ -491,6 +491,39 @@ const handleSubmitScores = async () => {
 
           if (response && response.id) {
             successCount++;
+                // Optimistically add the created grade to the UI so teacher sees it immediately
+                try {
+                  const examTypeName = categories.find(c => c.id === selectedCategory)?.name || '';
+                  const newGrade = {
+                    id: response.id,
+                    studentId: student.id,
+                    studentName: `${student.firstName} ${student.lastName}`,
+                    studentEmail: student.email || '',
+                    subjectId: assignment.subject.id,
+                    subjectName: assignment.subject.name || '',
+                    examType: response.examType || examTypeName,
+                    score: response.pointsEarned ?? Number(score),
+                    maxScore: response.totalPoints ?? weight,
+                    percentage: response.percentage ?? ((response.pointsEarned ?? Number(score)) / (response.totalPoints ?? weight)) * 100,
+                    grade: response.grade || getLetterGrade(((response.pointsEarned ?? Number(score)) / (response.totalPoints ?? weight)) * 100),
+                    date: response.date ? new Date(response.date).toLocaleDateString() : new Date().toLocaleDateString(),
+                    semester: response.semester || '',
+                    remarks: response.remarks || '',
+                    className: response.className || `${assignment.class.grade?.name || ''} ${assignment.class.classSection?.name || ''}`,
+                  };
+                  setGrades((prev) => {
+                    // if a grade for this student+examType already exists, replace it; otherwise append
+                    const existsIndex = prev.findIndex(g => g.studentId === newGrade.studentId && g.examType === newGrade.examType);
+                    if (existsIndex !== -1) {
+                      const next = [...prev];
+                      next[existsIndex] = newGrade;
+                      return next;
+                    }
+                    return [...prev, newGrade];
+                  });
+                } catch (optimisticErr) {
+                  console.warn('Optimistic update failed:', optimisticErr);
+                }
           }
         } catch (err) {
           console.error(`Error submitting score for ${student.firstName} ${student.lastName}:`, err);
@@ -502,18 +535,32 @@ const handleSubmitScores = async () => {
     // Refresh grades after successful submission
     if (successCount > 0) {
       try {
-        const gradesRes = await getClassGrades({
+        // Refresh using the same parameters as the main grades fetch (do NOT include categoryId)
+        const params = {
           classId: assignment.class.id,
           subjectId: assignment.subject.id,
-          categoryId: selectedCategory,
           semesterId: selectedSemester,
           academicYearId: selectedAcademicYear,
-        });
+        };
+        let gradesRes;
+        try {
+          gradesRes = await getClassGrades(params);
+        } catch (err: any) {
+          // Fallback to fetching all grades then filtering (robust for different backend shapes)
+          gradesRes = await getGrades();
+          gradesRes = gradesRes.filter(
+            (g: any) =>
+              g.classId === assignment.class.id &&
+              g.subjectId === assignment.subject.id &&
+              g.semesterId === selectedSemester &&
+              g.academicYearId === selectedAcademicYear
+          );
+        }
 
         const mappedGrades = gradesRes.map((g: any) => ({
           id: g.id,
           studentId: g.studentId,
-          studentName: g.studentName || `${g.student?.firstName} ${g.student?.lastName}` || '',
+          studentName: g.studentName || (g.student ? `${g.student.firstName} ${g.student.lastName}` : ''),
           studentEmail: g.studentEmail || g.student?.email || '',
           subjectId: g.subjectId,
           subjectName: g.subjectName || g.subject?.name || '',

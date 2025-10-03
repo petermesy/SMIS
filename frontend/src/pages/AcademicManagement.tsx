@@ -198,6 +198,8 @@ const handleBatchSaveStudentReportsAsPDF = async (students, grade, section, clas
     document.body.removeChild(container);
   }
 };
+
+
 import { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { useAuth } from '@/contexts/AuthContext';
@@ -271,6 +273,258 @@ export const AcademicManagement = () => {
   // Academic years and semesters state from backend
   const [academicYears, setAcademicYears] = useState<{ id: string; name: string }[]>([]);
   const [semesters, setSemesters] = useState<{ id: string; name: string }[]>([]);
+  // Helper to print a class roster (blank grid) similar to the provided roster image
+  const handlePrintRoster = (students: any[], grade: string, section: string, className: string, allSubjects: string[]) => {
+    const schoolName = 'Sawla Secondary and Preparatory School';
+    const academicYearObj = academicYears.find(y => y.id === selectedAcademicYear);
+    const academicYearName = academicYearObj ? academicYearObj.name : (selectedAcademicYear || '');
+
+    // Build header rows for subjects (we'll render subject names vertically by CSS rotate in print)
+    const subjectHeaders = allSubjects.map(sub => `<th style="padding:6px;border:1px solid #000;text-align:center;vertical-align:bottom;transform:rotate(-90deg);white-space:nowrap;padding-bottom:18px;">${sub}</th>`).join('');
+
+    // Build rows: for each student, create three rows for I, II, AV (as in the template)
+    let bodyRows = '';
+    let rno = 1;
+    for (const student of students) {
+      // three small rows per student
+      const nameCell = `<td rowspan="3" style="border:1px solid #000;padding:6px;vertical-align:middle;width:260px">${student.firstName} ${student.lastName}</td>`;
+      const rnoCell = `<td rowspan="3" style="border:1px solid #000;padding:6px;width:40px;text-align:center;vertical-align:middle">${rno}</td>`;
+      const sexCell = `<td rowspan="3" style="border:1px solid #000;padding:6px;width:40px;text-align:center;vertical-align:middle">${student.gender || ''}</td>`;
+      const ageCell = `<td rowspan="3" style="border:1px solid #000;padding:6px;width:40px;text-align:center;vertical-align:middle">${student.age || ''}</td>`;
+
+    // Determine semester identifiers: prefer the selected academic year's semesters if available
+    const academicYearObj = academicYears.find(y => y.id === selectedAcademicYear) || null;
+    const semDefs = (academicYearObj && academicYearObj.semesters && academicYearObj.semesters.length) ? academicYearObj.semesters : (semesters || []);
+    const sem1Id = semDefs && semDefs.length > 0 ? (semDefs[0].id || semDefs[0].name) : 'I';
+    const sem2Id = semDefs && semDefs.length > 1 ? (semDefs[1].id || semDefs[1].name) : 'II';
+  // Use full labels to match printed roster sample
+  const semLabels = ['First semester', 'Second semester', 'Average of both semester'];
+
+      // Debug: print semester defs and a sample of grades to help diagnose matching issues
+      try {
+        // eslint-disable-next-line no-console
+        console.debug('handlePrintRoster debug', { semDefs, selectedAcademicYear, gradesSample: (grades || []).slice(0, 30) });
+      } catch (e) {}
+
+      // Helper to compute totals for a student+subject+semester
+      const getTotals = (studentId: string | number, subject: string, semesterId?: string | number) => {
+        const sidNorm = (studentId || '').toString().trim();
+        const subjNorm = subject ? subject.toString().trim().toLowerCase() : '';
+        const semNorm = semesterId !== undefined && semesterId !== null ? semesterId.toString().trim().toLowerCase() : '';
+
+        const entries = (grades || []).filter((g: any) => {
+          try {
+            // Normalize student id comparison (allow number/string)
+            const gStudent = (g.studentId || g.student?.id || g.studentId)?.toString().trim();
+            if (!gStudent || gStudent !== sidNorm) return false;
+
+            // Subject matching: permissive checks
+            if (subjNorm) {
+              const candidates: string[] = [];
+              if (g.subjectName) candidates.push((g.subjectName || '').toString().trim().toLowerCase());
+              if (g.subjectId) candidates.push((g.subjectId || '').toString().trim().toLowerCase());
+              if (g.subject && typeof g.subject === 'object') {
+                if (g.subject.name) candidates.push((g.subject.name || '').toString().trim().toLowerCase());
+                if (g.subject.id) candidates.push((g.subject.id || '').toString().trim().toLowerCase());
+              }
+              // Also consider mapped `subject` state
+              if (subjects && subjects.length) {
+                const sObj = subjects.find((s: any) => (s.name || '').toString().trim().toLowerCase() === subjNorm);
+                if (sObj && sObj.id) candidates.push((sObj.id || '').toString().trim().toLowerCase());
+              }
+              // If no candidate matched, reject
+              const subjectMatch = candidates.length === 0 ? true : candidates.some(c => c === subjNorm || c.includes(subjNorm) || subjNorm.includes(c));
+              if (!subjectMatch) return false;
+            }
+
+            // Academic year filter (if selected)
+            if (selectedAcademicYear) {
+              const gAY = (g.academicYear || (g.class && g.class.academicYearId) || (g.academicYearId))?.toString();
+              if (gAY && gAY !== selectedAcademicYear && (gAY !== (selectedAcademicYear.toString()))) {
+                // allow if nested object with id
+                if (!(g.academicYear && g.academicYear.id && g.academicYear.id.toString() === selectedAcademicYear.toString())) {
+                  return false;
+                }
+              }
+            }
+
+            // Semester matching (if provided)
+            if (semesterId !== undefined && semesterId !== null) {
+              let gSem = g.semester;
+              if (typeof gSem === 'object') gSem = gSem.id || gSem.name || '';
+              const gSemStr = (gSem || g.semesterName || g.semesterId || '')?.toString().trim().toLowerCase();
+              const targetSemStr = semNorm;
+              if (!gSemStr && !targetSemStr) {
+                // both empty – accept
+                return true;
+              }
+              // direct match
+              if (gSemStr === targetSemStr) return true;
+              // try semDefs
+              const found = (semDefs || []).find((s: any) => {
+                const sid = (s.id || '').toString().trim().toLowerCase();
+                const sname = (s.name || '').toString().trim().toLowerCase();
+                return sid === targetSemStr || sname === targetSemStr || sid === gSemStr || sname === gSemStr;
+              });
+              if (found) return true;
+              // numeric/roman mapping
+              const mapToNum = (v?: string) => {
+                const t = (v || '').toString().trim().toLowerCase();
+                if (['i', '1', 'first', 'one'].includes(t)) return 1;
+                if (['ii', '2', 'second', 'two'].includes(t)) return 2;
+                if (['iii', '3', 'third', 'three'].includes(t)) return 3;
+                return null;
+              };
+              const gNum = mapToNum(gSemStr);
+              const tNum = mapToNum(targetSemStr);
+              if (gNum && tNum && gNum === tNum) return true;
+              // fallback: no semester match
+              return false;
+            }
+            return true;
+          } catch (err) {
+            return false;
+          }
+        });
+
+        try {
+          // eslint-disable-next-line no-console
+          console.debug('getTotals', { studentId: sidNorm, subject: subjNorm, semesterId: semNorm, matchedEntriesCount: entries.length, matchedEntries: entries.slice(0,5) });
+        } catch (e) {}
+
+        const totalEarned = entries.reduce((s: number, e: any) => s + (Number(e.score ?? e.pointsEarned ?? 0)), 0);
+        const totalPossible = entries.reduce((s: number, e: any) => s + (Number(e.maxScore ?? e.totalPoints ?? 0)), 0);
+        return { totalEarned, totalPossible };
+      };
+
+      // For each of the three subrows (I, II, AV), create subject cells with values
+      const semIds = [sem1Id, sem2Id];
+      // precompute semester totals per student
+      const semTotalsPerStudent: Array<{ earned: number; possible: number }[]> = [];
+      // compute for sem1 and sem2
+      const semTotals = semIds.map((sId) => {
+        const tAll = allSubjects.reduce((acc, subj) => {
+          // compute semester-specific totals only (do NOT fallback to combined subjectMap here)
+          const t = getTotals(student.id, subj, sId) || { totalEarned: 0, totalPossible: 0 };
+          return { earned: acc.earned + (t.totalEarned || 0), possible: acc.possible + (t.totalPossible || 0) };
+        }, { earned: 0, possible: 0 });
+        return tAll;
+      });
+
+      for (let i = 0; i < 3; i++) {
+        let row = '<tr>';
+        if (i === 0) {
+          row += rnoCell + nameCell + sexCell + ageCell;
+        }
+        // semester label cell
+        row += `<td style="border:1px solid #000;padding:6px;text-align:center;width:60px">${semLabels[i]}</td>`;
+
+        // fill subject cells: for I and II rows show semester totals, for AV show percentage average across both semesters
+        for (let j = 0; j < allSubjects.length; j++) {
+          const subj = allSubjects[j];
+          if (i === 0 || i === 1) {
+            const semId = semIds[i];
+            // For semester rows, use semester-specific totals only
+            const t = getTotals(student.id, subj, semId) || { totalEarned: 0, totalPossible: 0 };
+            const cellVal = (t && (t.totalEarned || t.totalEarned === 0)) ? `${t.totalEarned}` : '';
+            row += `<td style="border:1px solid #000;padding:6px;width:60px;height:22px;text-align:center">${cellVal}</td>`;
+          } else {
+            // AV row: compute from semester totals when available; otherwise fall back to combined subjectMap
+            const t1 = getTotals(student.id, subj, semIds[0]) || null;
+            const t2 = getTotals(student.id, subj, semIds[1]) || null;
+            const v1 = (t1 && (t1.totalEarned || t1.totalEarned === 0)) ? Number(t1.totalEarned) : null;
+            const v2 = (t2 && (t2.totalEarned || t2.totalEarned === 0)) ? Number(t2.totalEarned) : null;
+            let avgVal = '';
+            if (v1 !== null && v2 !== null) {
+              avgVal = ((Math.round(((v1 + v2) / 2) * 10) / 10)).toString();
+            } else if (v1 !== null) {
+              avgVal = (Math.round(v1 * 10) / 10).toString();
+            } else if (v2 !== null) {
+              avgVal = (Math.round(v2 * 10) / 10).toString();
+            } else {
+              const subjMap = student.subjectMap && student.subjectMap[subj];
+              if (subjMap && subjMap.totalEarned !== undefined) {
+                avgVal = (Math.round((Number(subjMap.totalEarned || 0)) * 10) / 10).toString();
+              }
+            }
+            row += `<td style="border:1px solid #000;padding:6px;width:60px;height:22px;text-align:center">${avgVal}</td>`;
+          }
+        }
+
+        // trailing columns: show semester totals and combined averages
+        if (i === 0 || i === 1) {
+          const st = semTotals[i] || { earned: 0, possible: 0 };
+          const totalCell = st.possible > 0 ? `${st.earned} / ${st.possible}` : '';
+          const avgCell = st.possible > 0 ? ((st.earned / st.possible) * 100).toFixed(1) + '%' : '';
+          row += `<td style="border:1px solid #000;padding:6px;width:60px;text-align:center">${totalCell}</td>`; // Total
+          row += `<td style="border:1px solid #000;padding:6px;width:60px;text-align:center">${avgCell}</td>`; // Average
+        } else {
+          const combined = { earned: (semTotals[0]?.earned || 0) + (semTotals[1]?.earned || 0), possible: (semTotals[0]?.possible || 0) + (semTotals[1]?.possible || 0) };
+          const totalCell = combined.possible > 0 ? `${combined.earned} / ${combined.possible}` : '';
+          const avgCell = combined.possible > 0 ? ((combined.earned / combined.possible) * 100).toFixed(1) + '%' : '';
+          row += `<td style="border:1px solid #000;padding:6px;width:60px;text-align:center">${totalCell}</td>`; // Total
+          row += `<td style="border:1px solid #000;padding:6px;width:60px;text-align:center">${avgCell}</td>`; // Average
+        }
+        // Rank/Cond/Attn left blank for now
+        row += `<td style="border:1px solid #000;padding:6px;width:60px"></td>`; // Rank
+        row += `<td style="border:1px solid #000;padding:6px;width:60px"></td>`; // Cond
+        row += `<td style="border:1px solid #000;padding:6px;width:60px"></td>`; // Attn
+        row += '</tr>';
+        bodyRows += row;
+      }
+      rno++;
+    }
+
+    const headerSubjectsCount = allSubjects.length;
+
+    const content = `
+      <div style="font-family:Arial,Helvetica,sans-serif;padding:18px;">
+        <div style="text-align:center;margin-bottom:12px;">
+          <h2 style="margin:0;font-size:18px;font-weight:700">${schoolName}</h2>
+          <div style="font-size:14px;margin-top:6px;font-weight:600">Student's Roster for Grade ${grade} ${section ? ` / Section ${section}` : ''}</div>
+          <div style="font-size:12px;margin-top:4px">Academic year: ${academicYearName || '____ E.C'} &nbsp;&nbsp; Grade & Section: ${grade} ${section}</div>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:12px;">
+          <thead>
+            <tr>
+              <th style="border:1px solid #000;padding:6px;width:40px">R N o.</th>
+              <th style="border:1px solid #000;padding:6px;width:260px">Student's name</th>
+              <th style="border:1px solid #000;padding:6px;width:40px">Sex</th>
+              <th style="border:1px solid #000;padding:6px;width:40px">Age</th>
+              <th style="border:1px solid #000;padding:6px">Semester</th>
+              ${subjectHeaders}
+              <th style="border:1px solid #000;padding:6px;width:60px">Total</th>
+              <th style="border:1px solid #000;padding:6px;width:60px">Average</th>
+              <th style="border:1px solid #000;padding:6px;width:60px">Rank</th>
+              <th style="border:1px solid #000;padding:6px;width:60px">Cond</th>
+              <th style="border:1px solid #000;padding:6px;width:60px">Attn</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${bodyRows}
+          </tbody>
+        </table>
+
+        <div style="margin-top:18px;font-size:12px">School principal name: ____________________________ &nbsp;&nbsp; Sign: ______________________</div>
+      </div>
+    `;
+
+    const printWindow = window.open('', '', 'width=1100,height=900');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html><head><title>Class Roster - ${grade} ${section}</title>
+      <style>
+        @media print { th { -webkit-print-color-adjust: exact; } }
+        /* Prevent rotated headers from clipping in some browsers */
+        th { vertical-align: bottom; }
+      </style>
+      </head><body>
+        ${content}
+        <script>window.onload = function(){ window.print(); }</script>
+      </body></html>
+    `);
+    printWindow.document.close();
+  };
   // Export a single section to Excel, including subject-wise scores
   const exportSectionToExcel = (grade: string, section: string, className: string, students: any[]) => {
     const getStudentGrades = (studentId: string) => grades.filter(g => g.studentId === studentId);
@@ -638,6 +892,27 @@ export const AcademicManagement = () => {
           <Button onClick={exportAllSectionsToExcel} variant="outline" size="sm">
             Export All Classes to Excel
           </Button>
+          <Button variant="outline" size="sm" onClick={() => {
+            // Print roster(s) for selected grade
+            if (!selectedGrade) {
+              toast.error('Please select a Grade to print roster for.');
+              return;
+            }
+            // find classes matching selected grade
+            const classEntries = Object.values(classStudentMap).filter((c: any) => (c.grade?.name || '').toString() === selectedGrade.toString());
+            if (classEntries.length === 0) {
+              toast.error('No classes found for selected grade.');
+              return;
+            }
+            for (const cls of classEntries) {
+              const students = cls.students || [];
+              // collect subjects for this class from grades
+              const allSubjects = Array.from(new Set(grades.filter((g: any) => g.classId === cls.id).map((g: any) => g.subjectName).filter(Boolean)));
+              handlePrintRoster(students, selectedGrade, cls.section?.name || cls.section || '', cls.name, allSubjects.length ? allSubjects : ['Subject']);
+            }
+          }}>
+            Print Roster
+          </Button>
         </div>
         {Object.entries(gradeSectionMap).sort(([a], [b]) => a.localeCompare(b)).map(([grade, sectionMap]) => (
           <div key={grade} className="space-y-6">
@@ -699,6 +974,9 @@ export const AcademicManagement = () => {
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => handleBatchSaveStudentReportsAsPDF(rankedStudents, grade, section, className, allSubjects, rankedStudents)}>
                       Save All as PDF
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handlePrintRoster(rankedStudents, grade, section, className, allSubjects)}>
+                      Print Roster
                     </Button>
                   </div>
                   <h4 className="text-lg font-semibold">Section {section} ({className})</h4>
