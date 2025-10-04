@@ -162,11 +162,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error?.response?.status === 401) {
-      console.warn('API responded with 401 Unauthorized - clearing token for debugging');
+      console.warn('API responded with 401 Unauthorized - dispatching unauthorized event');
       try {
-        localStorage.removeItem('token');
+        window.dispatchEvent(new CustomEvent('api:unauthorized', { detail: { url: error.config?.url, data: error.response?.data } }));
       } catch (e) {
-        console.error('Failed to remove token', e);
+        console.error('Failed to dispatch api:unauthorized event', e);
       }
     }
     console.error('API error:', error?.response?.data || error?.message);

@@ -1,6 +1,6 @@
-
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AuthContextType, User } from '@/types/user';
+import * as api from '@/lib/api';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -20,30 +20,30 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Real authentication using backend API
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const { login, getMe } = await import('@/lib/api');
-      const data = await login(email, password);
-      localStorage.setItem('token', data.token);
-      const userData = await getMe();
+      const data = await api.login(email, password);
+      if (data?.token) {
+        localStorage.setItem('token', data.token);
+      }
+      const userData = await api.getMe();
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
-    } catch (error: any) {
-      setUser(null);
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      throw error;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     setUser(null);
     localStorage.removeItem('user');
     localStorage.removeItem('token');
+    try {
+      await api.logout();
+    } catch {
+      // ignore network errors on logout
+    }
   };
 
   useEffect(() => {
@@ -52,11 +52,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          const { getMe } = await import('@/lib/api');
-          const userData = await getMe();
+          const userData = await api.getMe();
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
-        } catch {
+        } catch (err) {
           setUser(null);
           localStorage.removeItem('user');
           localStorage.removeItem('token');
@@ -68,6 +67,16 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setIsLoading(false);
     };
     checkAuth();
+  }, []);
+
+  // Listen for API unauthorized events (dispatched by axios interceptor)
+  useEffect(() => {
+    const handler = (e: any) => {
+      console.warn('Received api:unauthorized event, logging out user', e?.detail || '');
+      logout();
+    };
+    window.addEventListener('api:unauthorized', handler as EventListener);
+    return () => window.removeEventListener('api:unauthorized', handler as EventListener);
   }, []);
 
   return (

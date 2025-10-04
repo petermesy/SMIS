@@ -264,31 +264,91 @@ const handleRegisterNext = async () => {
             </tbody>
           </table>
 
-          {/* Subject totals table */}
-          <table className="min-w-full text-sm mt-8">
-            <thead>
-              <tr>
-                <th className="border px-2 py-1">Subject</th>
-                <th className="border px-2 py-1">Total Score</th>
-                <th className="border px-2 py-1">Total Possible</th>
-              </tr>
-            </thead>
-            <tbody>
-              {subjects.map((subject: any) => {
-                const subjectGrades = grades.filter((g: any) => g.subjectId === subject.id);
-                if (subjectGrades.length === 0) return null;
-                const totalEarned = subjectGrades.reduce((sum: number, g: any) => sum + (g.pointsEarned || 0), 0);
-                const totalPossible = subjectGrades.reduce((sum: number, g: any) => sum + (g.totalPoints || 0), 0);
-                return (
-                  <tr key={subject.id}>
-                    <td className="border px-2 py-1 font-semibold">{subject.name}</td>
-                    <td className="border px-2 py-1">{totalEarned}</td>
-                    <td className="border px-2 py-1">{totalPossible}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          {/* Subject totals table (roster-like when academic year selected) */}
+          {selectedAcademicYear && !selectedSemester ? (
+            // When an academic year is selected (and no semester selected), show both semesters side-by-side like the roster
+            (() => {
+              // Determine the two semester ids present in the filtered grades (preserve order)
+              const semIds = Array.from(new Set(grades.map((g: any) => (g.semester && g.semester.id) || g.semesterId || g.semester))).filter(Boolean).slice(0, 2);
+              const semNames = semIds.map((id: any, idx: number) => semesterMap[id] || (id && (id.name || id)) || `Semester ${idx + 1}`);
+              return (
+                <table className="min-w-full text-sm mt-8 border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="border px-2 py-1">Subject</th>
+                      <th className="border px-2 py-1">First semester</th>
+                      <th className="border px-2 py-1">Second semester</th>
+                      <th className="border px-2 py-1">Average</th>
+                      <th className="border px-2 py-1">Total</th>
+                      <th className="border px-2 py-1">Percentage</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {subjects.map((subject: any) => {
+                      const sid = subject.id;
+                      const subjGrades = grades.filter((g: any) => g.subjectId === sid || g.subjectId === String(sid));
+                      if (subjGrades.length === 0) return null;
+                      const sem1Id = semIds[0];
+                      const sem2Id = semIds[1];
+                      const sem1Grades = sem1Id ? subjGrades.filter((g: any) => ((g.semester && g.semester.id) || g.semesterId || g.semester) === sem1Id) : [];
+                      const sem2Grades = sem2Id ? subjGrades.filter((g: any) => ((g.semester && g.semester.id) || g.semesterId || g.semester) === sem2Id) : [];
+                      const sem1Earned = sem1Grades.reduce((s: number, g: any) => s + (g.pointsEarned || g.score || 0), 0);
+                      const sem1Possible = sem1Grades.reduce((s: number, g: any) => s + (g.totalPoints || g.maxScore || 0), 0);
+                      const sem2Earned = sem2Grades.reduce((s: number, g: any) => s + (g.pointsEarned || g.score || 0), 0);
+                      const sem2Possible = sem2Grades.reduce((s: number, g: any) => s + (g.totalPoints || g.maxScore || 0), 0);
+                      // Average: mean of semester earned marks (if both present) else use available
+                      let avgDisplay = '';
+                      if (sem1Grades.length && sem2Grades.length) {
+                        avgDisplay = ((Math.round(((sem1Earned + sem2Earned) / 2) * 10) / 10)).toString();
+                      } else if (sem1Grades.length) {
+                        avgDisplay = (Math.round(sem1Earned * 10) / 10).toString();
+                      } else if (sem2Grades.length) {
+                        avgDisplay = (Math.round(sem2Earned * 10) / 10).toString();
+                      }
+                      const totalEarned = sem1Earned + sem2Earned;
+                      const totalPossible = sem1Possible + sem2Possible;
+                      const percent = totalPossible > 0 ? ((totalEarned / totalPossible) * 100).toFixed(1) + '%' : '';
+                      return (
+                        <tr key={sid}>
+                          <td className="border px-2 py-1 font-semibold">{subject.name}</td>
+                          <td className="border px-2 py-1 text-center">{sem1Grades.length ? `${sem1Earned}` : '-'}</td>
+                          <td className="border px-2 py-1 text-center">{sem2Grades.length ? `${sem2Earned}` : '-'}</td>
+                          <td className="border px-2 py-1 text-center">{avgDisplay}</td>
+                          <td className="border px-2 py-1 text-center">{totalPossible > 0 ? `${totalEarned} / ${totalPossible}` : ''}</td>
+                          <td className="border px-2 py-1 text-center">{percent}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              );
+            })()
+          ) : (
+            <table className="min-w-full text-sm mt-8">
+              <thead>
+                <tr>
+                  <th className="border px-2 py-1">Subject</th>
+                  <th className="border px-2 py-1">Total Score</th>
+                  <th className="border px-2 py-1">Total Possible</th>
+                </tr>
+              </thead>
+              <tbody>
+                {subjects.map((subject: any) => {
+                  const subjectGrades = grades.filter((g: any) => g.subjectId === subject.id);
+                  if (subjectGrades.length === 0) return null;
+                  const totalEarned = subjectGrades.reduce((sum: number, g: any) => sum + (g.pointsEarned || g.score || 0), 0);
+                  const totalPossible = subjectGrades.reduce((sum: number, g: any) => sum + (g.totalPoints || g.maxScore || 0), 0);
+                  return (
+                    <tr key={subject.id}>
+                      <td className="border px-2 py-1 font-semibold">{subject.name}</td>
+                      <td className="border px-2 py-1">{totalEarned}</td>
+                      <td className="border px-2 py-1">{totalPossible}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          )}
 
           {/* Average for all subjects */}
           <div className="mt-8">

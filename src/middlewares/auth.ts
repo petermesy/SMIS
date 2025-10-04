@@ -8,13 +8,39 @@ export interface AuthRequest extends Request {
 }
 
 export function authenticateJWT(req: AuthRequest, res: Response, next: NextFunction) {
-  const authHeader = req.headers.authorization;
-  console.log('Backend received Authorization header:', authHeader);
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    res.status(401).json({ error: 'Missing or invalid Authorization header' });
+  // Accept token from several common sources to be tolerant of client variations:
+  // - Authorization: Bearer <token>
+  // - Authorization: <token> (raw token)
+  // - x-access-token header
+  // - query param ?token= or ?access_token=
+  // - cookie `token` (if cookie-parser is used)
+  const rawAuth = (req.headers.authorization || '') as string;
+  const xAccess = (req.headers['x-access-token'] || req.headers['x_access_token'] || req.headers['x-access_token']) as string | undefined;
+  const qToken = (req.query && (req.query.token || req.query.access_token)) as string | undefined;
+  const cookieToken = (req as any).cookies?.token as string | undefined;
+
+  let token: string | undefined;
+  if (rawAuth && rawAuth.toString().trim()) {
+    // support 'Bearer <token>' and raw token values
+    const v = rawAuth.toString().trim();
+    if (/^Bearer\s+/i.test(v)) token = v.replace(/^Bearer\s+/i, '').trim();
+    else token = v;
+  }
+  if (!token && xAccess) token = xAccess;
+  if (!token && qToken) token = qToken;
+  if (!token && cookieToken) token = cookieToken;
+
+  // Debug: show we received something (never print full token)
+  try {
+    if (token) console.log('Backend received auth token (truncated):', token.substring(0, 12) + '...');
+    else console.log('Backend did not receive an auth token');
+  } catch (e) {}
+
+  if (!token) {
+    res.status(401).json({ error: 'Missing authentication token' });
     return;
   }
-  const token = authHeader.split(' ')[1];
+
   try {
     const decoded = jwt.verify(token, config.jwtSecret);
     req.user = decoded;
@@ -50,8 +76,14 @@ export function authenticateJWT(req: AuthRequest, res: Response, next: NextFunct
       });
     }
     next();
-  } catch (err) {
-    res.status(401).json({ error: 'Invalid or expired token' });
+  } catch (err: any) {
+    // Provide more specific reason when available but avoid leaking token details
+    if (err && err.name === 'TokenExpiredError') {
+      res.status(401).json({ error: 'Token expired' });
+      return;
+    }
+    console.error('JWT verification failed:', err && err.message ? err.message : err);
+    res.status(401).json({ error: 'Invalid authentication token' });
     return;
   }
 }
