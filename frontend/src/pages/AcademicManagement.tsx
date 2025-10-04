@@ -798,6 +798,221 @@ export const AcademicManagement = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAcademicYear]);
 
+  // Top-level inline roster renderer (component scope) so it can be reused by multiple tabs
+  const rosterInlineRenderer = (rankedStudents: any[], allSubjects: string[], gradeName: string, sectionName: string, classNameStr: string) => {
+    if (!selectedAcademicYear) return null;
+    // Determine semester ids (prefer academic year's semesters)
+    const academicYearObj = academicYears.find((y: any) => y.id === selectedAcademicYear) || null;
+    const semDefs = (academicYearObj && academicYearObj.semesters && academicYearObj.semesters.length) ? academicYearObj.semesters : (semesters || []);
+    const sem1Id = semDefs && semDefs.length > 0 ? (semDefs[0].id || semDefs[0].name) : 'I';
+    const sem2Id = semDefs && semDefs.length > 1 ? (semDefs[1].id || semDefs[1].name) : 'II';
+    const semIds = [sem1Id, sem2Id];
+    const semLabels = ['First semester', 'Second semester', 'Average of both semester'];
+
+    const getTotalsLocal = (studentId: string | number, subject: string, semesterId?: string | number) => {
+      const sidNorm = (studentId || '').toString().trim();
+      const subjNorm = subject ? subject.toString().trim().toLowerCase() : '';
+      const semNorm = semesterId !== undefined && semesterId !== null ? semesterId.toString().trim().toLowerCase() : '';
+      const entries = grades.filter((g: any) => {
+        try {
+          const gStudent = (g.studentId || (g.student && g.student.id))?.toString().trim();
+          if (!gStudent || gStudent !== sidNorm) return false;
+          if (subjNorm) {
+            const candidates: string[] = [];
+            if (g.subjectName) candidates.push((g.subjectName || '').toString().trim().toLowerCase());
+            if (g.subjectId) candidates.push((g.subjectId || '').toString().trim().toLowerCase());
+            if (g.subject && typeof g.subject === 'object') {
+              if (g.subject.name) candidates.push((g.subject.name || '').toString().trim().toLowerCase());
+              if (g.subject.id) candidates.push((g.subject.id || '').toString().trim().toLowerCase());
+            }
+            if (candidates.length > 0) {
+              const match = candidates.some(c => c === subjNorm || c.includes(subjNorm) || subjNorm.includes(c));
+              if (!match) return false;
+            }
+          }
+          if (selectedAcademicYear) {
+            const gAY = (g.academicYear || (g.class && g.class.academicYearId) || g.academicYearId)?.toString();
+            if (gAY && gAY !== selectedAcademicYear && !(g.academicYear && g.academicYear.id && g.academicYear.id.toString() === selectedAcademicYear.toString())) return false;
+          }
+          if (semesterId !== undefined && semesterId !== null) {
+            let gSem = g.semester;
+            if (typeof gSem === 'object') gSem = g.semester.id || g.semester.name || gSem;
+            const gSemStr = (gSem || g.semesterName || g.semesterId || '')?.toString().trim().toLowerCase();
+            const targetSemStr = semNorm;
+            if (gSemStr === targetSemStr) return true;
+            const mapToNum = (v?: string) => {
+              const t = (v || '').toString().trim().toLowerCase();
+              if (['i', '1', 'first', 'one'].includes(t)) return 1;
+              if (['ii', '2', 'second', 'two'].includes(t)) return 2;
+              return null;
+            };
+            const gNum = mapToNum(gSemStr);
+            const tNum = mapToNum(targetSemStr);
+            if (gNum && tNum && gNum === tNum) return true;
+            return false;
+          }
+          return true;
+        } catch (err) {
+          return false;
+        }
+      });
+      const totalEarned = entries.reduce((s: number, e: any) => s + (Number(e.score ?? e.pointsEarned ?? 0)), 0);
+      const totalPossible = entries.reduce((s: number, e: any) => s + (Number(e.maxScore ?? e.totalPoints ?? 0)), 0);
+      return { totalEarned, totalPossible };
+    };
+
+    // Render JSX table (three rows per student: sem1, sem2, avg)
+    return (
+      <div className="mb-4">
+        <h6 className="text-sm font-semibold mb-2">Roster View ({gradeName} - {sectionName})</h6>
+        <div className="overflow-x-auto">
+          <table className="w-full border text-sm">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="p-2 border">R N o.</th>
+                <th className="p-2 border">Student</th>
+                <th className="p-2 border">Email</th>
+                <th className="p-2 border">Sex</th>
+                <th className="p-2 border">Age</th>
+                <th className="p-2 border">Semester</th>
+                {allSubjects.map(sub => <th key={sub} className="p-2 border text-center">{sub}</th>)}
+                <th className="p-2 border">Total</th>
+                <th className="p-2 border">Average</th>
+                <th className="p-2 border">Rank</th>
+                <th className="p-2 border">Cond</th>
+                <th className="p-2 border">Attn</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rankedStudents.map((student: any, idx: number) => {
+                const semTotals = semIds.map((sId) => {
+                  const tAll = allSubjects.reduce((acc, subj) => {
+                    const t = getTotalsLocal(student.id, subj, sId) || { totalEarned: 0, totalPossible: 0 };
+                    return { earned: acc.earned + (t.totalEarned || 0), possible: acc.possible + (t.totalPossible || 0) };
+                  }, { earned: 0, possible: 0 });
+                  return tAll;
+                });
+                const combined = { earned: (semTotals[0]?.earned || 0) + (semTotals[1]?.earned || 0), possible: (semTotals[0]?.possible || 0) + (semTotals[1]?.possible || 0) };
+                return (
+                  <>
+                    {[0,1,2].map(i => {
+                      return (
+                        <tr key={`${student.id}-${i}`} className="border hover:bg-gray-50">
+                          {i === 0 && (
+                            <>
+                              <td rowSpan={3} className="p-2 border align-middle text-center">{idx + 1}</td>
+                              <td rowSpan={3} className="p-2 border align-middle">{student.firstName} {student.lastName}</td>
+                              <td rowSpan={3} className="p-2 border align-middle">{student.email || ''}</td>
+                              <td rowSpan={3} className="p-2 border align-middle text-center">{student.gender || ''}</td>
+                              <td rowSpan={3} className="p-2 border align-middle text-center">{student.age || ''}</td>
+                            </>
+                          )}
+                          <td className="p-2 border text-center">{semLabels[i]}</td>
+                          {allSubjects.map(subj => {
+                            if (i === 0 || i === 1) {
+                              const semId = semIds[i];
+                              const t = getTotalsLocal(student.id, subj, semId) || { totalEarned: 0, totalPossible: 0 };
+                              let cellVal = (t && (t.totalEarned || t.totalEarned === 0)) ? `${t.totalEarned}` : '';
+                              // Fallback: if no semester-specific entry found, try student's subjectMap (combined total)
+                              if ((cellVal === '' || cellVal === null) && student.subjectMap && student.subjectMap[subj] && (student.subjectMap[subj].totalEarned !== undefined)) {
+                                const sVal = Number(student.subjectMap[subj].totalEarned || 0);
+                                cellVal = sVal || sVal === 0 ? `${sVal}` : '';
+                              }
+                              const cell = cellVal === '' ? '-' : cellVal;
+                              return <td key={subj} className="p-2 border text-center">{cell}</td>;
+                            }
+                            const t1 = getTotalsLocal(student.id, subj, semIds[0]) || null;
+                            const t2 = getTotalsLocal(student.id, subj, semIds[1]) || null;
+                            const v1 = (t1 && (t1.totalEarned || t1.totalEarned === 0)) ? Number(t1.totalEarned) : null;
+                            const p1 = (t1 && (t1.totalPossible || t1.totalPossible === 0)) ? Number(t1.totalPossible) : null;
+                            const v2 = (t2 && (t2.totalEarned || t2.totalEarned === 0)) ? Number(t2.totalEarned) : null;
+                            const p2 = (t2 && (t2.totalPossible || t2.totalPossible === 0)) ? Number(t2.totalPossible) : null;
+                            let avgVal = '-';
+                            // If both semester totals available, average their raw earned values
+                            if (v1 !== null && v2 !== null) {
+                              avgVal = ((Math.round(((v1 + v2) / 2) * 10) / 10)).toString();
+                            } else if (v1 !== null || v2 !== null) {
+                              // One semester present. Try to estimate the missing semester using subjectMap totals
+                              const subjMap = student.subjectMap && student.subjectMap[subj];
+                              let estimatedOther = null;
+                              if (subjMap && subjMap.totalEarned !== undefined) {
+                                const combined = Number(subjMap.totalEarned || 0);
+                                if (v1 !== null) {
+                                  // estimate semester2 = combined - sem1
+                                  estimatedOther = Math.max(0, combined - v1);
+                                } else if (v2 !== null) {
+                                  estimatedOther = Math.max(0, (Number(subjMap.totalEarned || 0) - v2));
+                                }
+                              }
+                              const present = v1 !== null ? v1 : v2 as number;
+                              if (estimatedOther !== null) {
+                                avgVal = ((Math.round(((present + estimatedOther) / 2) * 10) / 10)).toString();
+                              } else {
+                                // fallback to present semester raw value or combined total
+                                if (present !== null) avgVal = ((Math.round(present * 10) / 10)).toString();
+                                else if (subjMap && subjMap.totalEarned !== undefined) avgVal = (Math.round((Number(subjMap.totalEarned || 0)) * 10) / 10).toString();
+                              }
+                            } else {
+                              const subjMap = student.subjectMap && student.subjectMap[subj];
+                              if (subjMap && subjMap.totalEarned !== undefined) {
+                                avgVal = (Math.round((Number(subjMap.totalEarned || 0)) * 10) / 10).toString();
+                              }
+                            }
+                            return <td key={subj} className="p-2 border text-center">{avgVal}</td>;
+                          })}
+                          {i === 0 || i === 1 ? (
+                            <>
+                              <td className="p-2 border text-center">{semTotals[i].possible > 0 ? `${semTotals[i].earned} / ${semTotals[i].possible}` : ''}</td>
+                              <td className="p-2 border text-center">{semTotals[i].possible > 0 ? ((semTotals[i].earned / semTotals[i].possible) * 100).toFixed(1) + '%' : ''}</td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="p-2 border text-center">{combined.possible > 0 ? `${combined.earned} / ${combined.possible}` : ''}</td>
+                              <td className="p-2 border text-center">{combined.possible > 0 ? ((combined.earned / combined.possible) * 100).toFixed(1) + '%' : ''}</td>
+                            </>
+                          )}
+                          {i === 0 && <td rowSpan={3} className="p-2 border text-center">{student.rank}</td>}
+                          {i === 0 && <td rowSpan={3} className="p-2 border"></td>}
+                          {i === 0 && <td rowSpan={3} className="p-2 border"></td>}
+                        </tr>
+                      );
+                    })}
+                  </>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
+  // Wrapper to prepare rankedStudents and subjects then call renderer
+  const rosterWrapper = (classId?: string, gradeName?: string) => {
+    const classes = Object.values(classStudentMap) as any[];
+    const cls = classId ? classes.find(c => c.id === classId) : classes.find(c => (c.grade?.name || '') === (gradeName || selectedGrade));
+    if (!cls) return null;
+    const students = cls.students || [];
+    const studentsWithAvg = students.map((student: any) => {
+      const studentGrades = grades.filter(g => g.studentId === student.id && (!selectedAcademicYear || g.academicYear === selectedAcademicYear));
+      const totalEarned = studentGrades.reduce((sum, g) => sum + (g.score || 0), 0);
+      const totalPossible = studentGrades.reduce((sum, g) => sum + (g.maxScore || 0), 0);
+      const avg = totalPossible > 0 ? (totalEarned / totalPossible) * 100 : 0;
+      const subjectMap: Record<string, { totalEarned: number; totalPossible: number }> = {};
+      studentGrades.forEach(g => {
+        if (!subjectMap[g.subjectName]) subjectMap[g.subjectName] = { totalEarned: 0, totalPossible: 0 };
+        subjectMap[g.subjectName].totalEarned += g.score || 0;
+        subjectMap[g.subjectName].totalPossible += g.maxScore || 0;
+      });
+      return { ...student, totalEarned, totalPossible, avg, subjectMap };
+    });
+    studentsWithAvg.sort((a, b) => b.avg - a.avg || a.firstName.localeCompare(b.firstName));
+    let lastAvg = null; let lastRank = 0; let actualRank = 0;
+    const rankedStudents = studentsWithAvg.map(student => { actualRank++; if (lastAvg === student.avg) return { ...student, rank: lastRank }; lastAvg = student.avg; lastRank = actualRank; return { ...student, rank: lastRank }; });
+    const allSubjects = Array.from(new Set(rankedStudents.flatMap(s => Object.keys(s.subjectMap))));
+    return rosterInlineRenderer(rankedStudents, allSubjects as string[], gradeName || (cls.grade?.name || ''), (cls.section && cls.section.name) || cls.section || '', cls.name || '');
+  };
+
   // Helper to render the admin summary with ranking and filtering
   const renderAdminSummary = () => {
     // Organize by grade and section using classStudentMap
@@ -916,6 +1131,7 @@ export const AcademicManagement = () => {
                 <tr className="bg-gray-50">
                   <th className="p-2 border">R N o.</th>
                   <th className="p-2 border">Student</th>
+                  <th className="p-2 border">Email</th>
                   <th className="p-2 border">Sex</th>
                   <th className="p-2 border">Age</th>
                   <th className="p-2 border">Semester</th>
@@ -947,6 +1163,7 @@ export const AcademicManagement = () => {
                               <>
                                 <td rowSpan={3} className="p-2 border align-middle text-center">{idx + 1}</td>
                                 <td rowSpan={3} className="p-2 border align-middle">{student.firstName} {student.lastName}</td>
+                                <td rowSpan={3} className="p-2 border align-middle">{student.email || ''}</td>
                                 <td rowSpan={3} className="p-2 border align-middle text-center">{student.gender || ''}</td>
                                 <td rowSpan={3} className="p-2 border align-middle text-center">{student.age || ''}</td>
                               </>
@@ -1005,6 +1222,8 @@ export const AcademicManagement = () => {
         </div>
       );
     };
+
+    // (removed duplicate renderRosterJSX)
 
     if (Object.keys(gradeSectionMap).length === 0) {
       return <div className="text-gray-500">No student/class data available.</div>;
@@ -1175,7 +1394,7 @@ export const AcademicManagement = () => {
                       <br/>
                       <h6 className="text-sm font-semibold mb-2">Detailed Student Summary</h6>
                       {/* Inline roster view (appears when Academic Year selected) - placed above the detailed table for visibility */}
-                      {renderInlineRoster(rankedStudents, allSubjects, grade, section, className)}
+                      {rosterWrapper(undefined, grade)}
                     <div className="flex justify-end mb-2">
                       <Button
                         variant="outline"
@@ -1253,6 +1472,7 @@ export const AcademicManagement = () => {
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [classStudentMap, setClassStudentMap] = useState<any>({});
+  const [selectedSectionId, setSelectedSectionId] = useState<string>('');
 
   const gradesList = ['grade-9', 'grade-10', 'grade-11', 'grade-12'];
   const sections = ['A', 'B', 'C'];
@@ -1567,11 +1787,12 @@ export const AcademicManagement = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="subjects">Subjects</TabsTrigger>
           <TabsTrigger value="all-grades">All Grades</TabsTrigger>
           <TabsTrigger value="exams">Examinations</TabsTrigger>
           <TabsTrigger value="academic-years">Academic Years</TabsTrigger>
+          <TabsTrigger value="roster">Roster</TabsTrigger>
         </TabsList> 
         <TabsContent value="subjects" className="space-y-4">
           <SubjectManagement />
@@ -1659,6 +1880,95 @@ export const AcademicManagement = () => {
 
         <TabsContent value="academic-years" className="space-y-4">
           <AcademicYearManagement />
+        </TabsContent>
+        <TabsContent value="roster" className="space-y-4">
+          {user?.role === 'admin' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Roster View</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-4 items-end mb-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
+                    <select
+                      className="border rounded px-2 py-1 text-sm w-48"
+                      value={selectedAcademicYear}
+                      onChange={e => { setSelectedAcademicYear(e.target.value); setSelectedSemester(''); }}
+                    >
+                      <option value="">Select year</option>
+                      {academicYears && academicYears.length > 0
+                        ? academicYears.map((year: any) => (
+                            <option key={year.id} value={year.id}>{year.name}</option>
+                          ))
+                        : null}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Grade</label>
+                    <select className="border rounded px-2 py-1 text-sm w-48" value={selectedGrade} onChange={e => setSelectedGrade(e.target.value)}>
+                      <option value="">Select grade</option>
+                      {Array.from(new Set(Object.values(classStudentMap).map((c: any) => c.grade?.name).filter(Boolean))).map((g: any) => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
+                    <select className="border rounded px-2 py-1 text-sm w-48" value={''} onChange={() => {}}>
+                      <option value="">Select section (pick grade first)</option>
+                    </select>
+                  </div>
+                </div>
+                {/* If grade selected, show per-section options and roster for the selected section */}
+                {selectedAcademicYear && selectedGrade && (
+                  (() => {
+                    // build sections list for selected grade
+                    const classesForGrade = (Object.values(classStudentMap) as any[]).filter(c => (c.grade?.name || '') === selectedGrade);
+                    const sections = classesForGrade.map(c => ({ id: c.id, name: c.section?.name || c.section || c.name }));
+                    return (
+                      <div>
+                        <div className="mb-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Choose section</label>
+                          <div className="flex gap-2 flex-wrap">
+                            {sections.map(s => (
+                              <Button key={s.id} variant={s.id === selectedSectionId ? 'default' : 'outline'} size="sm" onClick={() => { setSelectedSectionId(s.id); }}>
+                                {s.name}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                        {/* Render roster for the first section as a default (or you can implement choosing a section via state) */}
+                        {sections.length > 0 && (() => {
+                          const cls = selectedSectionId ? classesForGrade.find(c => c.id === selectedSectionId) : classesForGrade.find(c => true) as any;
+                          const students = (cls && cls.students) ? cls.students : [];
+                          // compute subjectMap and avg similar to renderAdminSummary
+                          const studentsWithAvg = students.map((student: any) => {
+                            const studentGrades = grades.filter(g => g.studentId === student.id && (!selectedAcademicYear || g.academicYear === selectedAcademicYear));
+                            const totalEarned = studentGrades.reduce((sum, g) => sum + (g.score || 0), 0);
+                            const totalPossible = studentGrades.reduce((sum, g) => sum + (g.maxScore || 0), 0);
+                            const avg = totalPossible > 0 ? (totalEarned / totalPossible) * 100 : 0;
+                            const subjectMap: Record<string, { totalEarned: number; totalPossible: number }> = {};
+                            studentGrades.forEach(g => {
+                              if (!subjectMap[g.subjectName]) subjectMap[g.subjectName] = { totalEarned: 0, totalPossible: 0 };
+                              subjectMap[g.subjectName].totalEarned += g.score || 0;
+                              subjectMap[g.subjectName].totalPossible += g.maxScore || 0;
+                            });
+                            return { ...student, totalEarned, totalPossible, avg, subjectMap };
+                          });
+                          studentsWithAvg.sort((a, b) => b.avg - a.avg || a.firstName.localeCompare(b.firstName));
+                          let lastAvg = null; let lastRank = 0; let actualRank = 0;
+                          const rankedStudents = studentsWithAvg.map(student => { actualRank++; if (lastAvg === student.avg) return { ...student, rank: lastRank }; lastAvg = student.avg; lastRank = actualRank; return { ...student, rank: lastRank }; });
+                          const allSubjects = Array.from(new Set(rankedStudents.flatMap(s => Object.keys(s.subjectMap))));
+                          return rosterWrapper(cls?.id, selectedGrade);
+                        })()}
+                      </div>
+                    );
+                  })()
+                )}
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
 
