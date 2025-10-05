@@ -287,10 +287,14 @@ export const AcademicManagement = () => {
     let rno = 1;
     for (const student of students) {
       // three small rows per student
-      const nameCell = `<td rowspan="3" style="border:1px solid #000;padding:6px;vertical-align:middle;width:260px">${student.firstName} ${student.lastName}</td>`;
-      const rnoCell = `<td rowspan="3" style="border:1px solid #000;padding:6px;width:40px;text-align:center;vertical-align:middle">${rno}</td>`;
-      const sexCell = `<td rowspan="3" style="border:1px solid #000;padding:6px;width:40px;text-align:center;vertical-align:middle">${student.gender || ''}</td>`;
-      const ageCell = `<td rowspan="3" style="border:1px solid #000;padding:6px;width:40px;text-align:center;vertical-align:middle">${student.age || ''}</td>`;
+  // Compose student display name as: FirstName FatherName GrandFatherName
+  // Some student records don't include a separate 'fatherName' field; fallback to 'lastName'
+  const displayName = `${student.firstName || ''} ${(student.fatherName || student.lastName) || ''} ${student.grandFatherName || ''}`.trim();
+  const nameCell = `<td rowspan="3" style="border:1px solid #000;padding:6px;vertical-align:middle;width:260px">${displayName}</td>`;
+  const rnoCell = `<td rowspan="3" style="border:1px solid #000;padding:6px;width:40px;text-align:center;vertical-align:middle">${rno}</td>`;
+  const sexCell = `<td rowspan="3" style="border:1px solid #000;padding:6px;width:40px;text-align:center;vertical-align:middle">${student.gender || ''}</td>`;
+  const ageCell = `<td rowspan="3" style="border:1px solid #000;padding:6px;width:40px;text-align:center;vertical-align:middle">${student.age || ''}</td>`;
+  // removed separate grandfatherCell: grandfather will be included in displayName
 
     // Determine semester identifiers: prefer the selected academic year's semesters if available
     const academicYearObj = academicYears.find(y => y.id === selectedAcademicYear) || null;
@@ -298,7 +302,7 @@ export const AcademicManagement = () => {
     const sem1Id = semDefs && semDefs.length > 0 ? (semDefs[0].id || semDefs[0].name) : 'I';
     const sem2Id = semDefs && semDefs.length > 1 ? (semDefs[1].id || semDefs[1].name) : 'II';
   // Use full labels to match printed roster sample
-  const semLabels = ['First semester', 'Second semester', 'Average of both semester'];
+  const semLabels = ['I', 'II', 'AV'];
 
       // Debug: print semester defs and a sample of grades to help diagnose matching issues
       try {
@@ -475,7 +479,7 @@ export const AcademicManagement = () => {
       rno++;
     }
 
-    const headerSubjectsCount = allSubjects.length;
+  const headerSubjectsCount = allSubjects.length;
 
     const content = `
       <div style="font-family:Arial,Helvetica,sans-serif;padding:18px;">
@@ -486,7 +490,7 @@ export const AcademicManagement = () => {
         </div>
         <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:12px;">
           <thead>
-            <tr>
+              <tr>
               <th style="border:1px solid #000;padding:6px;width:40px">R N o.</th>
               <th style="border:1px solid #000;padding:6px;width:260px">Student's name</th>
               <th style="border:1px solid #000;padding:6px;width:40px">Sex</th>
@@ -807,7 +811,7 @@ export const AcademicManagement = () => {
     const sem1Id = semDefs && semDefs.length > 0 ? (semDefs[0].id || semDefs[0].name) : 'I';
     const sem2Id = semDefs && semDefs.length > 1 ? (semDefs[1].id || semDefs[1].name) : 'II';
     const semIds = [sem1Id, sem2Id];
-    const semLabels = ['First semester', 'Second semester', 'Average of both semester'];
+    const semLabels = ['I', 'II', 'AV'];
 
     const getTotalsLocal = (studentId: string | number, subject: string, semesterId?: string | number) => {
       const sidNorm = (studentId || '').toString().trim();
@@ -868,7 +872,7 @@ export const AcademicManagement = () => {
         <div className="overflow-x-auto">
           <table className="w-full border text-sm">
             <thead>
-              <tr className="bg-gray-50">
+                <tr className="bg-gray-50">
                 <th className="p-2 border">R N o.</th>
                 <th className="p-2 border">Student</th>
                 <th className="p-2 border">Email</th>
@@ -901,7 +905,7 @@ export const AcademicManagement = () => {
                           {i === 0 && (
                             <>
                               <td rowSpan={3} className="p-2 border align-middle text-center">{idx + 1}</td>
-                              <td rowSpan={3} className="p-2 border align-middle">{student.firstName} {student.lastName}</td>
+                              <td rowSpan={3} className="p-2 border align-middle">{`${student.firstName || ''} ${(student.fatherName || student.lastName) || ''} ${student.grandFatherName || ''}`.trim()}</td>
                               <td rowSpan={3} className="p-2 border align-middle">{student.email || ''}</td>
                               <td rowSpan={3} className="p-2 border align-middle text-center">{student.gender || ''}</td>
                               <td rowSpan={3} className="p-2 border align-middle text-center">{student.age || ''}</td>
@@ -1066,7 +1070,7 @@ export const AcademicManagement = () => {
       const sem1Id = semDefs && semDefs.length > 0 ? (semDefs[0].id || semDefs[0].name) : 'I';
       const sem2Id = semDefs && semDefs.length > 1 ? (semDefs[1].id || semDefs[1].name) : 'II';
       const semIds = [sem1Id, sem2Id];
-      const semLabels = ['First semester', 'Second semester', 'Average of both semester'];
+      const semLabels = ['I', 'II', 'Average of both semester'];
 
       const getTotalsLocal = (studentId: string | number, subject: string, semesterId?: string | number) => {
         const sidNorm = (studentId || '').toString().trim();
@@ -1162,7 +1166,7 @@ export const AcademicManagement = () => {
                             {i === 0 && (
                               <>
                                 <td rowSpan={3} className="p-2 border align-middle text-center">{idx + 1}</td>
-                                <td rowSpan={3} className="p-2 border align-middle">{student.firstName} {student.lastName}</td>
+                                <td rowSpan={3} className="p-2 border align-middle">{`${student.firstName || ''} ${(student.fatherName || student.lastName) || ''} ${student.grandFatherName || ''}`.trim()}</td>
                                 <td rowSpan={3} className="p-2 border align-middle">{student.email || ''}</td>
                                 <td rowSpan={3} className="p-2 border align-middle text-center">{student.gender || ''}</td>
                                 <td rowSpan={3} className="p-2 border align-middle text-center">{student.age || ''}</td>
@@ -1422,7 +1426,7 @@ export const AcademicManagement = () => {
                       <tbody>
                         {rankedStudents.map((student) => (
                           <tr key={student.id} className="border hover:bg-gray-50">
-                            <td className="p-2 border">{student.firstName} {student.lastName}</td>
+                            <td className="p-2 border">{`${student.firstName || ''} ${(student.fatherName || student.lastName) || ''} ${student.grandFatherName || ''}`.trim()}</td>
                             <td className="p-2 border">{student.email}</td>
                             
                             {allSubjects.map(subject => {
@@ -1915,8 +1919,25 @@ export const AcademicManagement = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
-                    <select className="border rounded px-2 py-1 text-sm w-48" value={''} onChange={() => {}}>
+                    {/* Populate sections for the selected grade and include an 'All sections' option */}
+                    <select
+                      className="border rounded px-2 py-1 text-sm w-48"
+                      value={selectedSectionId}
+                      onChange={(e) => setSelectedSectionId(e.target.value)}
+                    >
                       <option value="">Select section (pick grade first)</option>
+                      {selectedGrade && (() => {
+                        const classesForGrade = (Object.values(classStudentMap) as any[]).filter(c => (c.grade?.name || '') === selectedGrade);
+                        if (classesForGrade.length === 0) return null;
+                        return (
+                          <>
+                            <option value="ALL">All sections</option>
+                            {classesForGrade.map(c => (
+                              <option key={c.id} value={c.id}>{c.section?.name || c.section || c.name}</option>
+                            ))}
+                          </>
+                        );
+                      })()}
                     </select>
                   </div>
                 </div>
@@ -1931,6 +1952,9 @@ export const AcademicManagement = () => {
                         <div className="mb-2">
                           <label className="block text-sm font-medium text-gray-700 mb-1">Choose section</label>
                           <div className="flex gap-2 flex-wrap">
+                            <Button key="all-sections" variant={selectedSectionId === 'ALL' ? 'default' : 'outline'} size="sm" onClick={() => { setSelectedSectionId('ALL'); }}>
+                              All sections
+                            </Button>
                             {sections.map(s => (
                               <Button key={s.id} variant={s.id === selectedSectionId ? 'default' : 'outline'} size="sm" onClick={() => { setSelectedSectionId(s.id); }}>
                                 {s.name}
@@ -1938,28 +1962,17 @@ export const AcademicManagement = () => {
                             ))}
                           </div>
                         </div>
-                        {/* Render roster for the first section as a default (or you can implement choosing a section via state) */}
+                        {/* Render roster(s) for selected section or all sections */}
                         {sections.length > 0 && (() => {
+                          if (selectedSectionId === 'ALL') {
+                            // render each section's roster one after another
+                            return classesForGrade.map(c => (
+                              <div key={c.id} className="mb-6">
+                                {rosterWrapper(c.id, selectedGrade)}
+                              </div>
+                            ));
+                          }
                           const cls = selectedSectionId ? classesForGrade.find(c => c.id === selectedSectionId) : classesForGrade.find(c => true) as any;
-                          const students = (cls && cls.students) ? cls.students : [];
-                          // compute subjectMap and avg similar to renderAdminSummary
-                          const studentsWithAvg = students.map((student: any) => {
-                            const studentGrades = grades.filter(g => g.studentId === student.id && (!selectedAcademicYear || g.academicYear === selectedAcademicYear));
-                            const totalEarned = studentGrades.reduce((sum, g) => sum + (g.score || 0), 0);
-                            const totalPossible = studentGrades.reduce((sum, g) => sum + (g.maxScore || 0), 0);
-                            const avg = totalPossible > 0 ? (totalEarned / totalPossible) * 100 : 0;
-                            const subjectMap: Record<string, { totalEarned: number; totalPossible: number }> = {};
-                            studentGrades.forEach(g => {
-                              if (!subjectMap[g.subjectName]) subjectMap[g.subjectName] = { totalEarned: 0, totalPossible: 0 };
-                              subjectMap[g.subjectName].totalEarned += g.score || 0;
-                              subjectMap[g.subjectName].totalPossible += g.maxScore || 0;
-                            });
-                            return { ...student, totalEarned, totalPossible, avg, subjectMap };
-                          });
-                          studentsWithAvg.sort((a, b) => b.avg - a.avg || a.firstName.localeCompare(b.firstName));
-                          let lastAvg = null; let lastRank = 0; let actualRank = 0;
-                          const rankedStudents = studentsWithAvg.map(student => { actualRank++; if (lastAvg === student.avg) return { ...student, rank: lastRank }; lastAvg = student.avg; lastRank = actualRank; return { ...student, rank: lastRank }; });
-                          const allSubjects = Array.from(new Set(rankedStudents.flatMap(s => Object.keys(s.subjectMap))));
                           return rosterWrapper(cls?.id, selectedGrade);
                         })()}
                       </div>

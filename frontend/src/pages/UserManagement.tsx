@@ -199,8 +199,7 @@ export const UserManagement = () => {
                       <div className="flex items-center space-x-2">
                         <User className="w-4 h-4 text-gray-400" />
                         <span>
-                          {user.firstName} {user.lastName}
-                          {user.fatherName ? ` / ${user.fatherName}` : ''}
+                          {user.firstName} {(user.fatherName || user.lastName) ? `${user.fatherName || user.lastName}` : ''}
                           {user.grandFatherName ? `  ${user.grandFatherName}` : ''}
                         </span>
                       </div>
