@@ -10,7 +10,7 @@ interface StatsCardProps {
     value: number;
     isPositive: boolean;
   };
-  color?: 'blue' | 'green' | 'yellow' | 'red';
+  color?: 'blue' | 'green' | 'yellow' | 'red' | 'indigo' | 'pink';
 }
 
 export const StatsCard = ({ title, value, icon: Icon, trend, color = 'blue' }: StatsCardProps) => {
@@ -19,6 +19,8 @@ export const StatsCard = ({ title, value, icon: Icon, trend, color = 'blue' }: S
     green: 'bg-green-500 text-green-600',
     yellow: 'bg-yellow-500 text-yellow-600',
     red: 'bg-red-500 text-red-600',
+    indigo: 'bg-indigo-500 text-indigo-600',
+    pink: 'bg-pink-500 text-pink-600',
   };
 
   return (
@@ -34,8 +36,11 @@ export const StatsCard = ({ title, value, icon: Icon, trend, color = 'blue' }: S
               </p>
             )}
           </div>
-          <div className={`w-12 h-12 rounded-full ${colorClasses[color]} bg-opacity-10 flex items-center justify-center`}>
-            <Icon className={`w-6 h-6 ${colorClasses[color].split(' ')[1]}`} />
+          <div className={`w-12 h-12 rounded-full ${colorClasses[color] || 'bg-gray-500 text-gray-600'} bg-opacity-10 flex items-center justify-center`}>
+            {
+              // choose icon text color class safely
+            }
+            <Icon className={`w-6 h-6 ${(colorClasses[color] || 'bg-gray-500 text-gray-600').split(' ')[1] || 'text-gray-600'}`} />
           </div>
         </div>
       </CardContent>

@@ -20,12 +20,30 @@ const AdminDashboard = () => {
   const [studentCount, setStudentCount] = useState<number | null>(null);
   const [teacherCount, setTeacherCount] = useState<number | null>(null);
   const [classCount, setClassCount] = useState<number | null>(null);
+  const [maleCount, setMaleCount] = useState<number | null>(null);
+  const [femaleCount, setFemaleCount] = useState<number | null>(null);
 
   useEffect(() => {
     async function fetchStats() {
       try {
         const studentsRes = await getUsers({ role: 'STUDENT' });
-        setStudentCount(studentsRes.total);
+        // studentsRes can be an array, or an object with .data/.users and .total
+        const studentsArr = Array.isArray(studentsRes)
+          ? studentsRes
+          : (studentsRes?.users || studentsRes?.data || []);
+        const totalStudents = typeof studentsRes?.total === 'number' ? studentsRes.total : studentsArr.length;
+        setStudentCount(totalStudents);
+        // count genders defensively
+        const male = studentsArr.filter((s: any) => {
+          const g = ((s && (s.gender || s.sex)) || '').toString().toLowerCase();
+          return g === 'male' || g === 'm';
+        }).length;
+        const female = studentsArr.filter((s: any) => {
+          const g = ((s && (s.gender || s.sex)) || '').toString().toLowerCase();
+          return g === 'female' || g === 'f';
+        }).length;
+        setMaleCount(male);
+        setFemaleCount(female);
         const teachersRes = await getUsers({ role: 'TEACHER', status: 'ACTIVE' });
         setTeacherCount(teachersRes.total);
         const classesRes = await getClasses();
@@ -45,7 +63,7 @@ const AdminDashboard = () => {
         <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
         <p className="text-gray-600">Welcome back! Here's what's happening at your school today.</p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
         <StatsCard
           title="Total Students"
           value={studentCount !== null ? studentCount.toLocaleString() : '...'}
@@ -72,6 +90,18 @@ const AdminDashboard = () => {
           icon={TrendingUp}
           trend={{ value: 1.3, isPositive: true }}
           color="green"
+        />
+        <StatsCard
+          title="Male Students"
+          value={maleCount !== null ? maleCount.toLocaleString() : '...'}
+          icon={Users}
+          color="indigo"
+        />
+        <StatsCard
+          title="Female Students"
+          value={femaleCount !== null ? femaleCount.toLocaleString() : '...'}
+          icon={Users}
+          color="pink"
         />
       </div>
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
