@@ -31,21 +31,14 @@ export default function AdminTeacherAssignments() {
     fetch();
   }, [user]);
 
-  // Group by class -> academicYear -> semester
+  // Group by class -> academicYear (aggregate across semesters)
   const groupedByClass = assignments.reduce((acc: any, item: any) => {
     const className = `${item.class?.grade?.name || ''} ${item.class?.classSection?.name || ''}`.trim() || item.class?.id || 'Unassigned Class';
-  const ay = item.academicYear?.name || item.class?.academicYear?.name || 'Unknown Year';
-  // Determine semester display: prefer explicit semester, else list semesters for the academic year
-  let sem = '';
-  if (item.semester?.name) sem = item.semester.name;
-  else if (item.academicYear?.semesters?.length) sem = item.academicYear.semesters.map((s: any) => s.name).join(', ');
-  else if (item.class?.academicYear?.semesters?.length) sem = item.class.academicYear.semesters.map((s: any) => s.name).join(', ');
-  else sem = 'All Semesters';
+    const ay = item.academicYear?.name || item.class?.academicYear?.name || 'Unknown Year';
 
     acc[className] = acc[className] || {};
-    acc[className][ay] = acc[className][ay] || {};
-    acc[className][ay][sem] = acc[className][ay][sem] || [];
-    acc[className][ay][sem].push(item);
+    acc[className][ay] = acc[className][ay] || [];
+    acc[className][ay].push(item);
     return acc;
   }, {} as any);
 
@@ -63,67 +56,37 @@ export default function AdminTeacherAssignments() {
           Object.entries(groupedByClass).map(([className, years]: any) => (
             <div key={className} className="mb-6">
               <h2 className="text-xl font-semibold">{className}</h2>
-              {Object.entries(years).map(([ay, sems]: any) => {
-                // Build a semesters array for this academic year (preserve order if present)
-                const semesterNames = (() => {
-                  // try to find any semester list from the first item in sems
-                  const firstSemKey = Object.keys(sems)[0];
-                  const firstItems = sems[firstSemKey] || [];
-                  const ayObj = firstItems.find((i: any) => i.academicYear)?.academicYear || firstItems[0]?.class?.academicYear;
-                  if (ayObj?.semesters && ayObj.semesters.length) return ayObj.semesters.map((s: any) => ({ id: s.id, name: s.name }));
-                  // fallback to common two semesters
-                  return [ { id: 'first', name: 'First Semester' }, { id: 'second', name: 'Second Semester' } ];
-                })();
+              {Object.entries(years).map(([ay, items]: any) => {
+                // items is an array of all assignments for this class in this academic year (all semesters)
+                const unique = items.reduce((acc: any[], it: any) => {
+                  // de-duplicate by subjectId+teacherId to avoid duplicates across semesters
+                  const key = `${it.subject?.id || it.subjectId}-${it.teacher?.id || it.teacherId}`;
+                  if (!acc.find(a => a._key === key)) acc.push({ _key: key, item: it });
+                  return acc;
+                }, [] as any[]).map(x => x.item);
 
                 return (
                   <div key={`${className}-${ay}`} className="mt-3">
                     <h3 className="font-medium mb-3">{ay}</h3>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {semesterNames.map((semDef: any) => {
-                        // collect items for this semester: explicit matches OR assignments without semester but matching academic year
-                        const itemsForSem: any[] = [];
-                        Object.values(sems).forEach((arr: any) => {
-                          (arr as any[]).forEach((it: any) => {
-                            const itAyId = it.academicYear?.id || it.class?.academicYear?.id;
-                            const semId = it.semester?.id || it.semester?.name;
-                            if (semId) {
-                              // compare by id or name
-                              if (semId === semDef.id || semId === semDef.name) {
-                                itemsForSem.push(it);
-                              }
-                            } else {
-                              // no semester on assignment: include if academic year matches
-                              if (itAyId && ay && (it.academicYear?.name === ay || it.class?.academicYear?.name === ay)) {
-                                itemsForSem.push(it);
-                              }
-                            }
-                          });
-                        });
-
-                        return (
-                          <Card key={`${className}-${ay}-${semDef.id}`} className="mt-0">
-                            <CardHeader>
-                              <CardTitle>{semDef.name}</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                              {itemsForSem.length === 0 ? (
-                                <div className="text-sm text-gray-500">No assignments</div>
-                              ) : (
-                                <div className="space-y-2">
-                                  {itemsForSem.map((it: any) => (
-                                    <div key={it.id} className="flex justify-between items-center border-b pb-2">
-                                      <div className="text-sm font-medium">{it.subject?.name || it.subjectId}</div>
-                                      <div className="text-sm text-gray-700">{it.teacher ? `${it.teacher.firstName} ${it.teacher.lastName}` : it.teacherId}</div>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
-                    </div>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>All Semesters</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {unique.length === 0 ? (
+                          <div className="text-sm text-gray-500">No assignments</div>
+                        ) : (
+                          <div className="space-y-2">
+                            {unique.map((it: any) => (
+                              <div key={`${it.id || it.subjectId}-${it.teacherId || it.teacher?.id}`} className="flex justify-between items-center border-b pb-2">
+                                <div className="text-sm font-medium">{it.subject?.name || it.subjectId}</div>
+                                <div className="text-sm text-gray-700">{it.teacher ? `${it.teacher.firstName} ${it.teacher.lastName}` : it.teacherId}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
                   </div>
                 );
               })}
