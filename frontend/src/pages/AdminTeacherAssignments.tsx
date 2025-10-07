@@ -67,7 +67,7 @@ export default function AdminTeacherAssignments() {
 
                 return (
                   <div key={`${className}-${ay}`} className="mt-3">
-                    <h3 className="font-medium mb-3">{ay}</h3>
+                    <h3 className="font-medium mb-3" >{ay}</h3>
                     <Card>
                       <CardHeader>
                         <CardTitle>All Semesters</CardTitle>

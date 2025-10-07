@@ -83,13 +83,39 @@ export const getClassGrades = async (params: {
 
 // Get all grade levels with their sections (for schedule dropdowns)
 export async function getGradeLevelsWithSections() {
-  try {
-    const res = await api.get('/grades/levels-with-sections');
-    return res.data;
-  } catch (err: any) {
-    console.error('getGradeLevelsWithSections error:', err.response?.data || err.message);
-    throw err;
+  // Try a few possible backend endpoints for compatibility across deployments
+  // Prefer endpoints we know most backends implement first
+  const endpoints = ['/grades/levels', '/grades', '/grades/levels-with-sections', '/grades/levels_with_sections'];
+
+  for (const ep of endpoints) {
+    // Use validateStatus so that 404 responses resolve and don't trigger the global axios error interceptor
+    const res = await api.get(ep, { validateStatus: (s) => s < 500 }).catch(err => {
+      // Network errors etc - log and continue
+      console.warn(`getGradeLevelsWithSections: network error when calling ${ep}:`, err?.message || err);
+      return null;
+    });
+    if (!res) continue;
+    if (res.status === 404) {
+      // endpoint not present on this backend - try next
+      continue;
+    }
+    // Some servers return { grades: [...] } or { data: [...] }
+    const data = res.data?.grades || res.data?.data || res.data;
+    if (Array.isArray(data)) return data;
+    // If it's an object with nested structure, try to extract likely arrays
+    if (res.data && typeof res.data === 'object') {
+      const keys = Object.keys(res.data);
+      for (const k of keys) {
+        if (Array.isArray(res.data[k])) return res.data[k];
+      }
+    }
+    // If we get a truthy non-array value, return it
+    if (data) return data;
+    // otherwise continue to next endpoint
   }
+
+  console.error('getGradeLevelsWithSections error: no compatible endpoint found');
+  return [];
 }
 
 

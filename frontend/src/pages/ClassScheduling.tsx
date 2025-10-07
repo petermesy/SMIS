@@ -64,8 +64,8 @@ export const ClassScheduling = () => {
     if (!selectedTeacherId || !selectedGrade || !selectedSection) return subjects;
     // Find the classId for the selected grade/section
     let classId = null;
-    const classes = grades.flatMap((g: any) => g.sections?.map((s: any) => ({ gradeId: g.id, sectionId: s.id, classId: (s.classes && s.classes[0]?.id) || null })));
-    const cls = classes.find((c: any) => c && c.gradeId === selectedGrade && c.sectionId === selectedSection);
+  const classes = grades.flatMap((g: any) => g.sections?.map((s: any) => ({ gradeId: g.id, sectionId: s.id, classId: (s.classes && s.classes[0]?.id) || null })));
+  const cls = classes.find((c: any) => c && String(c.gradeId) === String(selectedGrade) && String(c.sectionId) === String(selectedSection));
     if (cls) classId = cls.classId;
     if (!classId) return [];
     // Find subjectIds assigned to selected teacher for this class
@@ -101,9 +101,14 @@ export const ClassScheduling = () => {
     async function fetchGrades() {
       try {
         const backendGrades = await getGradeLevelsWithSections();
+        // Debug: log the raw response shape so we can verify sections are present
+        console.debug('getGradeLevelsWithSections returned:', backendGrades);
+        if (!backendGrades || (Array.isArray(backendGrades) && backendGrades.length === 0)) {
+          console.warn('getGradeLevelsWithSections returned empty array or falsy value');
+        }
         setGrades(backendGrades);
         if (backendGrades.length > 0) {
-          setSelectedGrade(backendGrades[0].id);
+          setSelectedGrade(String(backendGrades[0].id));
         }
       } catch (e) {
         setGrades([]);
@@ -119,11 +124,11 @@ export const ClassScheduling = () => {
       setSelectedSection('');
       return;
     }
-    const gradeObj = grades.find((g: any) => g.id === selectedGrade);
+  const gradeObj = grades.find((g: any) => String(g.id) === String(selectedGrade));
     if (gradeObj && gradeObj.sections) {
       setSections(gradeObj.sections);
       if (gradeObj.sections.length > 0) {
-        setSelectedSection(gradeObj.sections[0].id);
+        setSelectedSection(String(gradeObj.sections[0].id));
       } else {
         setSelectedSection('');
       }
@@ -156,7 +161,7 @@ export const ClassScheduling = () => {
       try {
         // Get all classes, find the classId for selected grade/section
         const classes = await getClasses();
-        const cls = classes.find((c: any) => c.gradeId === selectedGrade && c.sectionId === selectedSection);
+      const cls = classes.find((c: any) => String(c.gradeId) === String(selectedGrade) && String(c.sectionId) === String(selectedSection));
         if (!cls) {
           setSchedules([]);
           return;
@@ -256,7 +261,7 @@ export const ClassScheduling = () => {
     let classId = null;
     try {
       const classes = await getClasses();
-      const cls = classes.find((c: any) => c.gradeId === selectedGrade && c.sectionId === selectedSection);
+  const cls = classes.find((c: any) => String(c.gradeId) === String(selectedGrade) && String(c.sectionId) === String(selectedSection));
       if (cls) classId = cls.id;
     } catch {}
 
@@ -380,8 +385,8 @@ export const ClassScheduling = () => {
           <CardTitle className="flex items-center space-x-2">
             <Calendar className="w-5 h-5" />
             <span>
-              Weekly Schedule - {grades.find(g => g.id === selectedGrade)?.name?.replace('-', ' ').toUpperCase() || '-'}
-              {sections.length > 0 && ` Section ${sections.find(s => s.id === selectedSection)?.name || selectedSection}`}
+              Weekly Schedule - {grades.find(g => String(g.id) === String(selectedGrade))?.name?.replace('-', ' ').toUpperCase() || '-'}
+              {sections.length > 0 && ` Section ${sections.find(s => String(s.id) === String(selectedSection))?.name || selectedSection}`}
             </span>
           </CardTitle>
         </CardHeader>
