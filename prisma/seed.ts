@@ -24,6 +24,28 @@ async function main() {
       status: Status.ACTIVE,
     },
   });
+
+  // Ensure a SUPERADMIN exists (use env vars when available)
+  const superEmail = process.env.SUPERADMIN_EMAIL || 'superadmin@school.com';
+  const superPwPlain = process.env.SUPERADMIN_PW || 'SuperAdmin123!';
+  const superPass = await bcrypt.hash(superPwPlain, 10);
+  const superadmin = await prisma.user.upsert({
+    where: { email: superEmail },
+    update: {
+      // ensure role/status updated if user already exists
+      role: Role.SUPERADMIN as any,
+      status: Status.ACTIVE,
+    },
+    create: {
+      email: superEmail,
+      passwordHash: superPass,
+      firstName: 'Super',
+      lastName: 'Admin',
+      role: Role.SUPERADMIN as any,
+      status: Status.ACTIVE,
+    },
+  });
+  console.log('Superadmin ensured:', superadmin.email);
   // const teacher = await prisma.user.upsert({
   //   where: { email: 'teacher@school.com' },
   //   update: {},

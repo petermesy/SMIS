@@ -258,6 +258,12 @@ export const listUsers = async (req: Request, res: Response) => {
       { email: { contains: search, mode: 'insensitive' } },
     ];
   }
+    const requesterRole = (req as any).user?.role;
+  if (requesterRole && requesterRole.toString().toUpperCase() === 'ADMIN') {
+    // ensure we add an AND condition to exclude SUPERADMIN
+    if (!where.AND) where.AND = [];
+    where.AND.push({ role: { not: 'SUPERADMIN' } });
+  }
   const skip = (Number(page) - 1) * Number(limit);
   const [users, total] = await Promise.all([
     prisma.user.findMany({
