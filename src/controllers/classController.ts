@@ -82,15 +82,52 @@ export const getStudentsByClass = async (req: Request, res: Response) => {
     semesterId = typeof semesterId === 'string' && semesterId.trim() ? semesterId : undefined;
 
     if (user?.role === 'TEACHER') {
-      const teacherAssignment = await prisma.teacherSubject.findFirst({
-        where: {
-          teacherId: user.id,
-          classId: classId,
-          academicYearId: academicYearId,
-        },
-      });
+      // If semesterId was provided but academicYearId not, infer academicYearId from semester
+      if (!academicYearId && semesterId) {
+        try {
+          const sem = await prisma.semester.findUnique({ where: { id: semesterId as string } });
+          if (sem) academicYearId = sem.academicYearId;
+        } catch (e) {
+          console.warn('Failed to infer academicYearId from semesterId', semesterId, e);
+        }
+      }
+
+      // Build teacherAssignment query: include academicYearId only when known
+      const teacherWhere: any = { teacherId: user.id, classId };
+      if (academicYearId) teacherWhere.academicYearId = academicYearId;
+      const teacherAssignment = await prisma.teacherSubject.findFirst({ where: teacherWhere });
+      console.debug('getStudentsByClass teacherAssignment check', { teacherWhere, found: !!teacherAssignment });
       if (!teacherAssignment) {
-        return res.status(403).json({ error: 'You are not assigned to this class for the selected academic year.' });
+        // Fallback: allow teachers who are assigned to this class in any academic year to view students
+        // If no assignment for the requested academic year/classId, try to allow access when the teacher
+        // is assigned to the same grade + section in another academic year (class records may be different objects per year)
+        const anyAssignment = await prisma.teacherSubject.findFirst({ where: { teacherId: user.id, classId } });
+        if (anyAssignment) {
+          console.warn('Teacher assignment not found for requested academic year; allowing access because teacher has assignment for this class in another year', { teacherId: user.id, classId, anyAssignmentAcademicYear: anyAssignment.academicYearId });
+        } else {
+          // Try to match by grade + classSection (handles classId changes across academic years)
+          try {
+            const cls = await prisma.class.findUnique({ where: { id: classId } });
+            if (cls) {
+              const gradeSectionAssignment = await prisma.teacherSubject.findFirst({
+                where: {
+                  teacherId: user.id,
+                  class: { gradeId: cls.gradeId, classSectionId: cls.classSectionId },
+                },
+              });
+              if (gradeSectionAssignment) {
+                console.warn('Teacher has assignment for same grade+section in another year; allowing access', { teacherId: user.id, classId, matchedClassId: gradeSectionAssignment.classId, matchedAcademicYear: gradeSectionAssignment.academicYearId });
+              } else {
+                return res.status(403).json({ error: 'You are not assigned to this class for the selected academic year.' });
+              }
+            } else {
+              return res.status(403).json({ error: 'You are not assigned to this class for the selected academic year.' });
+            }
+          } catch (e) {
+            console.error('Error while checking grade+section teacher assignment fallback', e);
+            return res.status(403).json({ error: 'You are not assigned to this class for the selected academic year.' });
+          }
+        }
       }
     }
 

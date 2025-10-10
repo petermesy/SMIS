@@ -30,6 +30,27 @@ export default function TeacherDashboard() {
     }
   }, [user]);
 
+  // Auto-select the current academic year, its current semester, and a default assignment
+  useEffect(() => {
+    try {
+      if (user?.role === 'teacher' && assignments.length && academicYears.length) {
+        if (!selectedAcademicYear) {
+          const currentYear = academicYears.find((y: any) => y.isCurrent) || academicYears[0];
+          if (currentYear) {
+            setSelectedAcademicYear(currentYear.id);
+            const currentSem = (currentYear.semesters || []).find((s: any) => s.isCurrent) || (currentYear.semesters || [])[0];
+            if (currentSem) setSelectedSemester(currentSem.id);
+          }
+        }
+        if (!selectedAssignment && assignments.length) {
+          setSelectedAssignment(assignments[0].id);
+        }
+      }
+    } catch (e) {
+      console.warn('Auto-select defaults failed', e);
+    }
+  }, [user, assignments, academicYears]);
+
   // Update semesters when academic year changes
   useEffect(() => {
     if (selectedAcademicYear) {
